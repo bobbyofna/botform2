@@ -54,6 +54,114 @@
                 <canvas id="performanceChart"></canvas>
             </div>
 
+            <!-- Bot Recent Activity Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('botActivity')">
+                    <h2 class="text-xl font-semibold">Bot Recent Activity</h2>
+                    <svg id="botActivityArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="botActivityPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading bot activity...</p>
+                </div>
+                <div id="botActivityExpanded" class="hidden">
+                    <div id="botActivityList" class="space-y-2 mb-4">
+                        <!-- Activity items will be loaded here -->
+                    </div>
+                    <div id="botActivityPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('botActivity', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="botActivityPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="botActivityPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('botActivity', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="botActivityNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open Bets Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('openBets')">
+                    <h2 class="text-xl font-semibold">Open Bets</h2>
+                    <svg id="openBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="openBetsPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading open bets...</p>
+                </div>
+                <div id="openBetsExpanded" class="hidden">
+                    <div id="openBetsList" class="space-y-2 mb-4">
+                        <!-- Open bet items will be loaded here -->
+                    </div>
+                    <div id="openBetsPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('openBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="openBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('openBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Closed Bets Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('closedBets')">
+                    <h2 class="text-xl font-semibold">Closed Bets</h2>
+                    <svg id="closedBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="closedBetsPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading closed bets...</p>
+                </div>
+                <div id="closedBetsExpanded" class="hidden">
+                    <div id="closedBetsList" class="space-y-2 mb-4">
+                        <!-- Closed bet items will be loaded here -->
+                    </div>
+                    <div id="closedBetsPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('closedBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="closedBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('closedBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Target User Recent Activity Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('targetUserActivity')">
+                    <h2 class="text-xl font-semibold">Target User Recent Activity</h2>
+                    <svg id="targetUserActivityArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="targetUserActivityPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading target user activity...</p>
+                </div>
+                <div id="targetUserActivityExpanded" class="hidden">
+                    <div id="targetUserActivityList" class="space-y-2 mb-4">
+                        <!-- Target user activity items will be loaded here -->
+                    </div>
+                    <div id="targetUserActivityPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('targetUserActivity', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="targetUserActivityPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="targetUserActivityPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('targetUserActivity', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="targetUserActivityNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Bot Parameters -->
             <div class="bg-white rounded-lg shadow p-6 mb-8">
                 <h2 class="text-xl font-semibold mb-4">Bot Parameters</h2>
@@ -111,12 +219,13 @@
                 <p class="text-sm text-gray-500 mt-2">Auto-saves 2 seconds after you stop typing</p>
             </div>
 
-            <!-- Recent Activity from Target User -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h2 class="text-xl font-semibold mb-4">Target User Recent Activity</h2>
-                <div id="recentActivity" class="space-y-2">
-                    <p class="text-gray-500">Loading activity...</p>
-                </div>
+            <!-- Danger Zone - Delete Bot -->
+            <div class="bg-white rounded-lg shadow p-6 border-2 border-red-200">
+                <h2 class="text-xl font-semibold mb-2 text-red-600">Danger Zone</h2>
+                <p class="text-sm text-gray-600 mb-4">Deleting this bot is permanent and cannot be undone. All trade history and configuration will be lost.</p>
+                <button id="deleteBotBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                    Delete Bot
+                </button>
             </div>
         </main>
     </div>
@@ -192,8 +301,8 @@
                 // Load health check
                 await checkTargetUserHealth();
 
-                // Load recent activity
-                await loadRecentActivity();
+                // Load section data
+                await loadSectionData();
 
                 // Load performance data
                 await loadPerformanceData();
@@ -228,38 +337,23 @@
             }
         }
 
-        // Load recent activity
-        async function loadRecentActivity() {
-            const activityDiv = document.getElementById('recentActivity');
+        // Extract user address from URL or direct input
+        function extractUserAddress(targetUserUrl) {
+            if (!targetUserUrl) return null;
 
-            if (botData.target_user_address === null) {
-                activityDiv.innerHTML = '<p class="text-gray-500">No target user address set yet</p>';
-                return;
+            // Check if it's already a direct address (0x...)
+            const directMatch = targetUserUrl.match(/^(0x[a-fA-F0-9]{40})$/);
+            if (directMatch) {
+                return directMatch[1];
             }
 
-            try {
-                const response = await fetch('/api/user-activity/' + botData.target_user_address + '?limit=10');
-                const data = await response.json();
-
-                if (data.activities.length === 0) {
-                    activityDiv.innerHTML = '<p class="text-gray-500">No recent activity</p>';
-                    return;
-                }
-
-                activityDiv.innerHTML = data.activities.map(activity => `
-                    <div class="border rounded p-3">
-                        <div class="flex justify-between">
-                            <span class="font-semibold">${activity.market_name || 'Unknown Market'}</span>
-                            <span class="text-sm text-gray-500">${new Date(activity.timestamp * 1000).toLocaleString()}</span>
-                        </div>
-                        <div class="text-sm text-gray-600">
-                            ${activity.side || 'N/A'} • $${(activity.price || 0).toFixed(2)} • ${(activity.size || 0)} shares
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                activityDiv.innerHTML = '<p class="text-red-500">Error loading activity</p>';
+            // Try to extract from URL format
+            const urlMatch = targetUserUrl.match(/\/user\/(0x[a-fA-F0-9]{40})/);
+            if (urlMatch) {
+                return urlMatch[1];
             }
+
+            return null;
         }
 
         // Load performance data
@@ -398,6 +492,286 @@
                 }
             }, 2000);
         });
+
+        // Delete bot handler
+        document.getElementById('deleteBotBtn').addEventListener('click', async () => {
+            const botName = botData ? botData.name : 'this bot';
+            const confirmMessage = 'Are you sure you want to delete "' + botName + '"?\n\nThis action cannot be undone. All trade history and configuration will be permanently lost.';
+
+            if (confirm(confirmMessage) === false) {
+                return;
+            }
+
+            // Double confirmation for extra safety
+            if (confirm('This is your last chance. Really delete "' + botName + '"?') === false) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/bots/' + botId, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok === true) {
+                    alert('Bot deleted successfully');
+                    window.location.href = '/';
+                } else {
+                    const errorData = await response.json();
+                    alert('Failed to delete bot: ' + (errorData.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error deleting bot: ' + error.message);
+            }
+        });
+
+        // Section state management
+        const sectionStates = {
+            botActivity: { expanded: false, page: 1, data: [] },
+            targetUserActivity: { expanded: false, page: 1, data: [] },
+            openBets: { expanded: false, page: 1, data: [] },
+            closedBets: { expanded: false, page: 1, data: [] }
+        };
+
+        const PREVIEW_ITEMS = 3;
+        const ITEMS_PER_PAGE = 20;
+
+        // Load section state from localStorage
+        function loadSectionStates() {
+            try {
+                const saved = localStorage.getItem('botDetailSectionStates_' + botId);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    Object.keys(sectionStates).forEach(key => {
+                        if (parsed[key]) {
+                            sectionStates[key].expanded = parsed[key].expanded || false;
+                            sectionStates[key].page = parsed[key].page || 1;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading section states:', e);
+            }
+        }
+
+        // Save section states to localStorage
+        function saveSectionStates() {
+            try {
+                const toSave = {};
+                Object.keys(sectionStates).forEach(key => {
+                    toSave[key] = {
+                        expanded: sectionStates[key].expanded,
+                        page: sectionStates[key].page
+                    };
+                });
+                localStorage.setItem('botDetailSectionStates_' + botId, JSON.stringify(toSave));
+            } catch (e) {
+                console.error('Error saving section states:', e);
+            }
+        }
+
+        // Toggle section expand/collapse
+        function toggleSection(sectionName) {
+            const state = sectionStates[sectionName];
+            state.expanded = !state.expanded;
+
+            const previewEl = document.getElementById(sectionName + 'Preview');
+            const expandedEl = document.getElementById(sectionName + 'Expanded');
+            const arrowEl = document.getElementById(sectionName + 'Arrow');
+
+            if (state.expanded) {
+                previewEl.classList.add('hidden');
+                expandedEl.classList.remove('hidden');
+                arrowEl.classList.add('rotate-180');
+                renderSection(sectionName, false);
+            } else {
+                previewEl.classList.remove('hidden');
+                expandedEl.classList.add('hidden');
+                arrowEl.classList.remove('rotate-180');
+                renderSection(sectionName, true);
+            }
+
+            saveSectionStates();
+        }
+
+        // Change page for a section
+        function changePage(sectionName, direction) {
+            const state = sectionStates[sectionName];
+            const newPage = state.page + direction;
+            const totalPages = Math.ceil(state.data.length / ITEMS_PER_PAGE);
+
+            if (newPage < 1 || newPage > totalPages) return;
+
+            state.page = newPage;
+            renderSection(sectionName, false);
+            saveSectionStates();
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return days + 'd ago';
+            if (hours > 0) return hours + 'h ago';
+            const minutes = Math.floor(diff / (1000 * 60));
+            if (minutes > 0) return minutes + 'm ago';
+            return 'Just now';
+        }
+
+        // Render bot trade item
+        function renderBotTradeItem(trade) {
+            const profitLoss = trade.profit_loss || 0;
+            const isProfitable = profitLoss >= 0;
+            const colorClass = isProfitable ? 'text-green-600' : 'text-red-600';
+
+            return `
+                <div class="border rounded p-3 hover:bg-gray-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs bg-${trade.is_paper_trade ? 'blue' : 'green'}-100 text-${trade.is_paper_trade ? 'blue' : 'green'}-800 px-2 py-1 rounded">
+                                    ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                </span>
+                                ${trade.status === 'open' ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Open</span>' : ''}
+                                ${trade.status === 'closed' ? '<span class="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">Closed</span>' : ''}
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Market: ${trade.market_id || 'N/A'}</p>
+                            <p class="text-sm text-gray-600">Outcome: ${trade.outcome || 'N/A'}</p>
+                            <p class="text-xs text-gray-400 mt-1">${formatTimestamp(trade.opened_at)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-600">Amount: $${(trade.amount || 0).toFixed(2)}</p>
+                            <p class="text-sm text-gray-600">Price: ${(trade.price || 0).toFixed(3)}</p>
+                            ${trade.status === 'closed' ? `<p class="text-sm font-semibold ${colorClass}">P/L: $${profitLoss.toFixed(2)}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render target user activity item
+        function renderTargetUserActivityItem(activity) {
+            const price = activity.price || activity.priceFloat || 0;
+            const size = activity.size || activity.outcomeTokensTraded || activity.shares || 0;
+            const side = activity.side || activity.tradeType || 'N/A';
+            const market = activity.market_name || activity.market || activity.conditionId || 'Market ID: ' + (activity.asset_id || 'Unknown');
+
+            let timeStr = 'Unknown time';
+            if (activity.timestamp) {
+                const ts = typeof activity.timestamp === 'number' ? activity.timestamp * 1000 : activity.timestamp;
+                timeStr = formatTimestamp(new Date(ts));
+            } else if (activity.transactionTime) {
+                timeStr = formatTimestamp(new Date(activity.transactionTime));
+            }
+
+            return `
+                <div class="border rounded p-3 hover:bg-gray-50">
+                    <div class="flex justify-between">
+                        <span class="font-semibold text-sm">${market}</span>
+                        <span class="text-xs text-gray-500">${timeStr}</span>
+                    </div>
+                    <div class="text-sm text-gray-600 mt-1">
+                        <span class="font-medium ${side === 'BUY' || side === 'buy' ? 'text-green-600' : 'text-red-600'}">${side}</span>
+                        • Price: $${parseFloat(price).toFixed(4)}
+                        • Size: ${parseFloat(size).toFixed(2)}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render section (preview or full)
+        function renderSection(sectionName, isPreview) {
+            const state = sectionStates[sectionName];
+            const data = state.data || [];
+
+            // Choose rendering function based on section type
+            const renderItem = sectionName === 'targetUserActivity' ? renderTargetUserActivityItem : renderBotTradeItem;
+
+            if (isPreview) {
+                const previewEl = document.getElementById(sectionName + 'Preview');
+                const previewData = data.slice(0, PREVIEW_ITEMS);
+
+                if (previewData.length === 0) {
+                    previewEl.innerHTML = '<p class="text-gray-500 text-center py-4">No data available</p>';
+                } else {
+                    previewEl.innerHTML = previewData.map(renderItem).join('');
+                }
+            } else {
+                const listEl = document.getElementById(sectionName + 'List');
+                const start = (state.page - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                const pageData = data.slice(start, end);
+                const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+
+                if (pageData.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-500 text-center py-4">No data available</p>';
+                } else {
+                    listEl.innerHTML = pageData.map(renderItem).join('');
+                }
+
+                // Update pagination
+                document.getElementById(sectionName + 'PageInfo').textContent = `Page ${state.page} of ${totalPages || 1}`;
+                document.getElementById(sectionName + 'PrevBtn').disabled = state.page <= 1;
+                document.getElementById(sectionName + 'NextBtn').disabled = state.page >= totalPages;
+            }
+        }
+
+        // Load data for all sections
+        async function loadSectionData() {
+            try {
+                // Load bot activity (all trades for this bot)
+                const activityResponse = await fetch('/api/bots/' + botId + '/trades?limit=100');
+                const activityData = await activityResponse.json();
+                sectionStates.botActivity.data = activityData.trades || [];
+
+                // Load target user activity
+                let userAddress = botData.target_user_address;
+                if (userAddress === null || userAddress === undefined) {
+                    userAddress = extractUserAddress(botData.target_user_url);
+                }
+
+                if (userAddress) {
+                    const targetResponse = await fetch('/api/user-activity/' + userAddress + '?limit=100');
+                    const targetData = await targetResponse.json();
+                    sectionStates.targetUserActivity.data = targetData.activities || [];
+                } else {
+                    sectionStates.targetUserActivity.data = [];
+                }
+
+                // Load open bets
+                const openResponse = await fetch('/api/bots/' + botId + '/trades?status=open&limit=100');
+                const openData = await openResponse.json();
+                sectionStates.openBets.data = openData.trades || [];
+
+                // Load closed bets
+                const closedResponse = await fetch('/api/bots/' + botId + '/trades?status=closed&limit=100');
+                const closedData = await closedResponse.json();
+                sectionStates.closedBets.data = closedData.trades || [];
+
+                // Render all sections
+                Object.keys(sectionStates).forEach(sectionName => {
+                    const state = sectionStates[sectionName];
+                    renderSection(sectionName, !state.expanded);
+
+                    // Apply saved expanded state
+                    if (state.expanded) {
+                        document.getElementById(sectionName + 'Preview').classList.add('hidden');
+                        document.getElementById(sectionName + 'Expanded').classList.remove('hidden');
+                        document.getElementById(sectionName + 'Arrow').classList.add('rotate-180');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading section data:', error);
+            }
+        }
+
+        // Initialize
+        loadSectionStates();
 
         // Load data on page load
         loadBotData();

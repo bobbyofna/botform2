@@ -52,7 +52,7 @@
             </div>
 
             <!-- Bot List -->
-            <div class="bg-white rounded-lg shadow p-6">
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">Your Bots</h2>
                     <div class="flex gap-4">
@@ -74,6 +74,87 @@
                     <p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>
                 </div>
             </div>
+
+            <!-- Recent Activity Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('recentActivity')">
+                    <h2 class="text-xl font-semibold">Recent Activity</h2>
+                    <svg id="recentActivityArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="recentActivityPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading recent activity...</p>
+                </div>
+                <div id="recentActivityExpanded" class="hidden">
+                    <div id="recentActivityList" class="space-y-2 mb-4">
+                        <!-- Activity items will be loaded here -->
+                    </div>
+                    <div id="recentActivityPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('recentActivity', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="recentActivityPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="recentActivityPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('recentActivity', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="recentActivityNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Open Bets Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('openBets')">
+                    <h2 class="text-xl font-semibold">Open Bets</h2>
+                    <svg id="openBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="openBetsPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading open bets...</p>
+                </div>
+                <div id="openBetsExpanded" class="hidden">
+                    <div id="openBetsList" class="space-y-2 mb-4">
+                        <!-- Open bet items will be loaded here -->
+                    </div>
+                    <div id="openBetsPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('openBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="openBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('openBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Closed Bets Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('closedBets')">
+                    <h2 class="text-xl font-semibold">Closed Bets</h2>
+                    <svg id="closedBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                </div>
+                <div id="closedBetsPreview" class="space-y-2">
+                    <p class="text-gray-500 text-center py-4">Loading closed bets...</p>
+                </div>
+                <div id="closedBetsExpanded" class="hidden">
+                    <div id="closedBetsList" class="space-y-2 mb-4">
+                        <!-- Closed bet items will be loaded here -->
+                    </div>
+                    <div id="closedBetsPagination" class="flex justify-between items-center">
+                        <button onclick="changePage('closedBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsPrevBtn">
+                            ← Previous
+                        </button>
+                        <span id="closedBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
+                        <button onclick="changePage('closedBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsNextBtn">
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -92,10 +173,10 @@
 
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">
-                        Target User URL
-                        <span class="text-gray-400 font-normal text-xs ml-1" title="Polymarket profile URL of the trader you want to copy">(?)</span>
+                        Target User Address or URL
+                        <span class="text-gray-400 font-normal text-xs ml-1" title="Ethereum address (0x...) or Polymarket profile URL">(?)</span>
                     </label>
-                    <input type="url" id="targetUrl" class="shadow appearance-none border rounded w-full py-2 px-3" placeholder="https://polymarket.com/user/0x..." required>
+                    <input type="text" id="targetUrl" class="shadow appearance-none border rounded w-full py-2 px-3" placeholder="0xa20b482f97063f4f88ef621c9203e60814399940 or https://polymarket.com/user/0x..." required>
                     <p id="validationMessage" class="text-sm mt-1 hidden"></p>
                 </div>
 
@@ -315,11 +396,215 @@
             }
         });
 
+        // Section state management
+        const sectionStates = {
+            recentActivity: { expanded: false, page: 1, data: [] },
+            openBets: { expanded: false, page: 1, data: [] },
+            closedBets: { expanded: false, page: 1, data: [] }
+        };
+
+        const PREVIEW_ITEMS = 3;
+        const ITEMS_PER_PAGE = 20;
+
+        // Load section state from localStorage
+        function loadSectionStates() {
+            try {
+                const saved = localStorage.getItem('homepageSectionStates');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    Object.keys(sectionStates).forEach(key => {
+                        if (parsed[key]) {
+                            sectionStates[key].expanded = parsed[key].expanded || false;
+                            sectionStates[key].page = parsed[key].page || 1;
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Error loading section states:', e);
+            }
+        }
+
+        // Save section states to localStorage
+        function saveSectionStates() {
+            try {
+                const toSave = {};
+                Object.keys(sectionStates).forEach(key => {
+                    toSave[key] = {
+                        expanded: sectionStates[key].expanded,
+                        page: sectionStates[key].page
+                    };
+                });
+                localStorage.setItem('homepageSectionStates', JSON.stringify(toSave));
+            } catch (e) {
+                console.error('Error saving section states:', e);
+            }
+        }
+
+        // Toggle section expand/collapse
+        function toggleSection(sectionName) {
+            const state = sectionStates[sectionName];
+            state.expanded = !state.expanded;
+
+            const previewEl = document.getElementById(sectionName + 'Preview');
+            const expandedEl = document.getElementById(sectionName + 'Expanded');
+            const arrowEl = document.getElementById(sectionName + 'Arrow');
+
+            if (state.expanded) {
+                previewEl.classList.add('hidden');
+                expandedEl.classList.remove('hidden');
+                arrowEl.classList.add('rotate-180');
+                renderSection(sectionName, false);
+            } else {
+                previewEl.classList.remove('hidden');
+                expandedEl.classList.add('hidden');
+                arrowEl.classList.remove('rotate-180');
+                renderSection(sectionName, true);
+            }
+
+            saveSectionStates();
+        }
+
+        // Change page for a section
+        function changePage(sectionName, direction) {
+            const state = sectionStates[sectionName];
+            const newPage = state.page + direction;
+            const totalPages = Math.ceil(state.data.length / ITEMS_PER_PAGE);
+
+            if (newPage < 1 || newPage > totalPages) return;
+
+            state.page = newPage;
+            renderSection(sectionName, false);
+            saveSectionStates();
+        }
+
+        // Format timestamp
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'N/A';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) return days + 'd ago';
+            if (hours > 0) return hours + 'h ago';
+            const minutes = Math.floor(diff / (1000 * 60));
+            if (minutes > 0) return minutes + 'm ago';
+            return 'Just now';
+        }
+
+        // Render trade item
+        function renderTradeItem(trade) {
+            const profitLoss = trade.profit_loss || 0;
+            const isProfitable = profitLoss >= 0;
+            const colorClass = isProfitable ? 'text-green-600' : 'text-red-600';
+
+            return `
+                <div class="border rounded p-3 hover:bg-gray-50">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold">${trade.bot_name || 'Unknown Bot'}</span>
+                                <span class="text-xs bg-${trade.is_paper_trade ? 'blue' : 'green'}-100 text-${trade.is_paper_trade ? 'blue' : 'green'}-800 px-2 py-1 rounded">
+                                    ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                </span>
+                                ${trade.status === 'open' ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Open</span>' : ''}
+                                ${trade.status === 'closed' ? '<span class="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">Closed</span>' : ''}
+                            </div>
+                            <p class="text-sm text-gray-600 mt-1">Market: ${trade.market_id || 'N/A'}</p>
+                            <p class="text-sm text-gray-600">Outcome: ${trade.outcome || 'N/A'}</p>
+                            <p class="text-xs text-gray-400 mt-1">${formatTimestamp(trade.opened_at)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-600">Amount: $${(trade.amount || 0).toFixed(2)}</p>
+                            <p class="text-sm text-gray-600">Price: ${(trade.price || 0).toFixed(3)}</p>
+                            ${trade.status === 'closed' ? `<p class="text-sm font-semibold ${colorClass}">P/L: $${profitLoss.toFixed(2)}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render section (preview or full)
+        function renderSection(sectionName, isPreview) {
+            const state = sectionStates[sectionName];
+            const data = state.data || [];
+
+            if (isPreview) {
+                const previewEl = document.getElementById(sectionName + 'Preview');
+                const previewData = data.slice(0, PREVIEW_ITEMS);
+
+                if (previewData.length === 0) {
+                    previewEl.innerHTML = '<p class="text-gray-500 text-center py-4">No data available</p>';
+                } else {
+                    previewEl.innerHTML = previewData.map(renderTradeItem).join('');
+                }
+            } else {
+                const listEl = document.getElementById(sectionName + 'List');
+                const start = (state.page - 1) * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                const pageData = data.slice(start, end);
+                const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+
+                if (pageData.length === 0) {
+                    listEl.innerHTML = '<p class="text-gray-500 text-center py-4">No data available</p>';
+                } else {
+                    listEl.innerHTML = pageData.map(renderTradeItem).join('');
+                }
+
+                // Update pagination
+                document.getElementById(sectionName + 'PageInfo').textContent = `Page ${state.page} of ${totalPages || 1}`;
+                document.getElementById(sectionName + 'PrevBtn').disabled = state.page <= 1;
+                document.getElementById(sectionName + 'NextBtn').disabled = state.page >= totalPages;
+            }
+        }
+
+        // Load data for all sections
+        async function loadSectionData() {
+            try {
+                // Load recent activity (all trades)
+                const activityResponse = await fetch('/api/trades/all?limit=100');
+                const activityData = await activityResponse.json();
+                sectionStates.recentActivity.data = activityData.trades || [];
+
+                // Load open bets
+                const openResponse = await fetch('/api/trades/all?status=open&limit=100');
+                const openData = await openResponse.json();
+                sectionStates.openBets.data = openData.trades || [];
+
+                // Load closed bets
+                const closedResponse = await fetch('/api/trades/all?status=closed&limit=100');
+                const closedData = await closedResponse.json();
+                sectionStates.closedBets.data = closedData.trades || [];
+
+                // Render all sections
+                Object.keys(sectionStates).forEach(sectionName => {
+                    const state = sectionStates[sectionName];
+                    renderSection(sectionName, !state.expanded);
+
+                    // Apply saved expanded state
+                    if (state.expanded) {
+                        document.getElementById(sectionName + 'Preview').classList.add('hidden');
+                        document.getElementById(sectionName + 'Expanded').classList.remove('hidden');
+                        document.getElementById(sectionName + 'Arrow').classList.add('rotate-180');
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error loading section data:', error);
+            }
+        }
+
+        // Initialize
+        loadSectionStates();
+
         // Load on page load
         loadBots();
+        loadSectionData();
 
         // Auto-refresh every 30 seconds
         setInterval(loadBots, 30000);
+        setInterval(loadSectionData, 30000);
     </script>
 </body>
 </html>

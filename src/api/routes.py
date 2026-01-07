@@ -71,6 +71,18 @@ async def create_bot(request: Request, bot_data: BotCreate):
         db_manager = request.app.state.db_manager
         bot_manager = request.app.state.bot_manager
 
+        # Extract user address from URL or direct input
+        import re
+        direct_match = re.match(r'^(0x[a-fA-F0-9]{40})$', bot_data.target_user_url.strip())
+        if direct_match is not None:
+            user_address = direct_match.group(1)
+        else:
+            url_match = re.search(r'/user/(0x[a-fA-F0-9]{40})', bot_data.target_user_url)
+            if url_match is not None:
+                user_address = url_match.group(1)
+            else:
+                user_address = None
+
         # Generate bot ID
         bot_id = id_generator.generate_bot_id()
 
@@ -81,7 +93,7 @@ async def create_bot(request: Request, bot_data: BotCreate):
             'bot_type': bot_data.bot_type,
             'status': 'inactive',
             'target_user_url': bot_data.target_user_url,
-            'target_user_address': None,  # Will be extracted by bot
+            'target_user_address': user_address,
             'max_trade_value': bot_data.max_trade_value,
             'min_trade_value': bot_data.min_trade_value,
             'copy_ratio': bot_data.copy_ratio,
@@ -267,16 +279,30 @@ async def get_bot_performance(request: Request, bot_id: str, period: Optional[st
 
 
 @router.get("/bots/{bot_id}/trades")
-async def get_bot_trades(request: Request, bot_id: str, limit: Optional[int] = 50, offset: Optional[int] = 0):
+async def get_bot_trades(request: Request, bot_id: str, limit: Optional[int] = 50, offset: Optional[int] = 0, status: Optional[str] = None):
     """Get trade history for a bot."""
     try:
         db_manager = request.app.state.db_manager
-        trades = await db_manager.get_bot_trades(bot_id, _limit=limit, _offset=offset)
+        trades = await db_manager.get_bot_trades(bot_id, _limit=limit, _offset=offset, _status=status)
 
-        return {"bot_id": bot_id, "trades": trades}
+        return {"bot_id": bot_id, "trades": trades, "count": len(trades)}
 
     except Exception as e:
         logger.error("Error getting bot trades: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/trades/all")
+async def get_all_trades(request: Request, limit: Optional[int] = 50, offset: Optional[int] = 0, status: Optional[str] = None):
+    """Get trade history across all bots."""
+    try:
+        db_manager = request.app.state.db_manager
+        trades = await db_manager.get_all_trades(_limit=limit, _offset=offset, _status=status)
+
+        return {"trades": trades, "count": len(trades)}
+
+    except Exception as e:
+        logger.error("Error getting all trades: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -338,19 +364,30 @@ async def validate_user(request: Request, target_user_url: str = Body(..., embed
     try:
         polymarket_client = request.app.state.polymarket_client
 
-        # Extract address from URL
+        # Extract address from URL or use direct address input
         import re
-        match = re.search(r'/user/(0x[a-fA-F0-9]+)', target_user_url)
-        if match is None:
-            return {
-                "valid": False,
-                "message": "Invalid Polymarket user URL format. Expected: https://polymarket.com/user/0x..."
-            }
 
-        user_address = match.group(1)
+        # First check if it's already a direct address (0x...)
+        direct_match = re.match(r'^(0x[a-fA-F0-9]{40})$', target_user_url.strip())
+        if direct_match is not None:
+            user_address = direct_match.group(1)
+        else:
+            # Try to extract from URL format
+            url_match = re.search(r'/user/(0x[a-fA-F0-9]{40})', target_user_url)
+            if url_match is None:
+                return {
+                    "valid": False,
+                    "message": "Invalid format. Expected: 0x... or https://polymarket.com/user/0x...",
+                    "address": None
+                }
+            user_address = url_match.group(1)
 
         # Validate the address
         result = await polymarket_client.validate_user_address(user_address)
+
+        # Include the extracted address in response
+        if result.get('valid') == True:
+            result['address'] = user_address
 
         return result
 
@@ -358,7 +395,8 @@ async def validate_user(request: Request, target_user_url: str = Body(..., embed
         logger.error("Error validating user: {}".format(str(e)))
         return {
             "valid": False,
-            "message": "Validation error: {}".format(str(e))
+            "message": "Validation error: {}".format(str(e)),
+            "address": None
         }
 
 

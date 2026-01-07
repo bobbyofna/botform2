@@ -244,41 +244,61 @@ class PolymarketClient:
             Dictionary with 'valid' (bool) and 'message' (str)
         """
         try:
-            # Create a separate client for this request to use correct base URL
-            async with httpx.AsyncClient(timeout=10.0) as temp_client:
-                # Try Strapi API for user activity (most reliable for user data)
-                url = "{}/api/users".format(self._strapi_url)
-                params = {'filters[address][$eq]': _user_address}
-
-                response = await temp_client.get(url, params=params)
-
-                if response.status_code == 200:
-                    data = response.json()
-                    if 'data' in data and len(data['data']) > 0:
-                        return {
-                            'valid': True,
-                            'message': 'User found',
-                            'data': data['data'][0]
-                        }
-
-                # Try alternative: check if we can get any data about this address
-                # Using data API to look for trades
-                data_url = "{}/trades?maker={}".format(self._data_url, _user_address)
-                response2 = await temp_client.get(data_url)
-
-                if response2.status_code == 200:
-                    trades_data = response2.json()
-                    if trades_data and len(trades_data) > 0:
-                        return {
-                            'valid': True,
-                            'message': 'User found via trades',
-                            'data': trades_data[0]
-                        }
-
+            # Basic address format validation
+            import re
+            if re.match(r'^0x[a-fA-F0-9]{40}$', _user_address) is None:
                 return {
                     'valid': False,
-                    'message': 'User address not found or has no activity'
+                    'message': 'Invalid Ethereum address format'
                 }
+
+            # Try to validate with Polymarket API
+            try:
+                # Create a separate client for this request to use correct base URL
+                async with httpx.AsyncClient(timeout=10.0) as temp_client:
+                    # Try Strapi API for user activity (most reliable for user data)
+                    url = "{}/api/users".format(self._strapi_url)
+                    params = {'filters[address][$eq]': _user_address}
+
+                    response = await temp_client.get(url, params=params)
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        if 'data' in data and len(data['data']) > 0:
+                            return {
+                                'valid': True,
+                                'message': 'User found on Polymarket',
+                                'data': data['data'][0]
+                            }
+
+                    # Try alternative: check if we can get any data about this address
+                    # Using data API to look for trades
+                    data_url = "{}/trades?maker={}".format(self._data_url, _user_address)
+                    response2 = await temp_client.get(data_url)
+
+                    if response2.status_code == 200:
+                        trades_data = response2.json()
+                        if trades_data and len(trades_data) > 0:
+                            return {
+                                'valid': True,
+                                'message': 'User found on Polymarket',
+                                'data': trades_data[0]
+                            }
+
+            except Exception as api_error:
+                # If API is unreachable (VPN required, DNS error, etc.)
+                # Accept the address format validation only
+                self._logger.warning("Polymarket API unreachable: {}".format(str(api_error)))
+                return {
+                    'valid': True,
+                    'message': 'Address format valid (API offline - VPN may be required for full validation)',
+                    'offline_mode': True
+                }
+
+            return {
+                'valid': False,
+                'message': 'User address not found on Polymarket'
+            }
 
         except Exception as e:
             self._logger.error("User validation failed: {}".format(str(e)))
@@ -290,7 +310,7 @@ class PolymarketClient:
     async def get_user_recent_activity(self, _user_address, _limit=10):
         """
         Get recent trading activity for a user address.
-        Uses data API to fetch recent trades.
+        Uses multiple Polymarket APIs to fetch recent trades.
 
         Args:
             _user_address: Ethereum address of user
@@ -301,7 +321,7 @@ class PolymarketClient:
         """
         try:
             async with httpx.AsyncClient(timeout=10.0) as temp_client:
-                # Fetch trades from data API
+                # Try data API first (most comprehensive trade data)
                 url = "{}/trades".format(self._data_url)
                 params = {
                     'maker': _user_address,
@@ -313,8 +333,24 @@ class PolymarketClient:
 
                 if response.status_code == 200:
                     trades = response.json()
-                    return trades if trades is not None else []
+                    if trades is not None and len(trades) > 0:
+                        return trades
 
+                # Fallback: Try CLOB API for order history
+                clob_url = "{}/data/trades".format(self._clob_url)
+                clob_params = {
+                    'maker': _user_address,
+                    'limit': _limit
+                }
+
+                clob_response = await temp_client.get(clob_url, params=clob_params)
+
+                if clob_response.status_code == 200:
+                    clob_trades = clob_response.json()
+                    if clob_trades is not None and len(clob_trades) > 0:
+                        return clob_trades
+
+                # Return empty list if no data found
                 return []
 
         except Exception as e:

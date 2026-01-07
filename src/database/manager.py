@@ -364,6 +364,42 @@ class DatabaseManager:
 
         return await self.fetch_all(query, params)
 
+    async def get_all_trades(self, _limit=None, _offset=None, _status=None):
+        """
+        Retrieve trades across all bots.
+
+        Args:
+            _limit: Maximum number of trades to return
+            _offset: Number of trades to skip
+            _status: Optional status filter
+
+        Returns:
+            List of trade records with bot names
+        """
+        query = """
+            SELECT t.*, b.name as bot_name
+            FROM trades t
+            LEFT JOIN bots b ON t.bot_id = b.bot_id
+            WHERE 1=1
+        """
+        params = {}
+
+        if _status is not None:
+            query = "{} AND t.status = %(status)s".format(query)
+            params['status'] = _status
+
+        query = "{} ORDER BY t.opened_at DESC".format(query)
+
+        if _limit is not None:
+            query = "{} LIMIT %(limit)s".format(query)
+            params['limit'] = _limit
+
+        if _offset is not None:
+            query = "{} OFFSET %(offset)s".format(query)
+            params['offset'] = _offset
+
+        return await self.fetch_all(query, params)
+
     async def update_bot_performance(self, _bot_id):
         """
         Update bot performance metrics from trade history.
