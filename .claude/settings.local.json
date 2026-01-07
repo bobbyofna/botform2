@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(python -m pip:*)",
+      "Bash(python test_setup.py:*)",
+      "Bash(python main.py:*)",
+      "Bash(curl:*)",
+      "Bash(venvScriptspip.exe install -r requirements.txt)",
+      "Bash(\"./venv/Scripts/pip.exe\" install -r requirements.txt)",
+      "Bash(\"./venv/Scripts/python.exe\" -m uvicorn src.main:app --host 127.0.0.1 --port 8000)",
+      "Bash(\"./venv/Scripts/pip.exe\" install psycopg-pool)",
+      "Bash(\"./venv/Scripts/python.exe\" run.py)",
+      "Bash(psql:*)",
+      "Bash(sc query:*)",
+      "Bash(\"./venv/Scripts/python.exe\" setup_database.py)",
+      "Bash(\"./venv/Scripts/python.exe\" -c \"import psycopg; conn = psycopg.connect\\(''postgresql://botuser:botpass123@localhost:5432/botform2''\\); print\\(''SUCCESS: Connected with botuser''\\); conn.close\\(\\)\")",
+      "Bash(netstat:*)",
+      "Bash(cat:*)"
+    ]
+  }
+}

@@ -1,0 +1,300 @@
+"""
+API routes for BotForm2.
+
+RESTful API endpoints for bot management.
+"""
+
+import logging
+from typing import Optional, List
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, Request, Body
+from pydantic import BaseModel
+
+from ..utils.id_generator import id_generator
+
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api")
+
+
+# Request/Response models
+class BotCreate(BaseModel):
+    name: str
+    bot_type: str
+    target_user_url: str
+    max_trade_value: Optional[float] = 500.0
+    min_trade_value: Optional[float] = 50.0
+    copy_ratio: Optional[float] = 0.5
+    stop_loss_percentage: Optional[float] = 10.0
+    max_daily_loss: Optional[float] = 1000.0
+    notes: Optional[str] = ''
+
+
+class BotUpdate(BaseModel):
+    name: Optional[str] = None
+    max_trade_value: Optional[float] = None
+    min_trade_value: Optional[float] = None
+    copy_ratio: Optional[float] = None
+    stop_loss_percentage: Optional[float] = None
+    max_daily_loss: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class BotStart(BaseModel):
+    mode: str  # 'paper' or 'production'
+
+
+class NotesUpdate(BaseModel):
+    notes: str
+
+
+# Bot management endpoints
+@router.get("/bots")
+async def get_bots(request: Request, status: Optional[str] = None, sort_by: Optional[str] = None):
+    """Get all bots with optional filtering and sorting."""
+    try:
+        db_manager = request.app.state.db_manager
+        bots = await db_manager.get_all_bots(_status=status, _sort_by=sort_by)
+        return {"bots": bots}
+
+    except Exception as e:
+        logger.error("Error getting bots: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bots")
+async def create_bot(request: Request, bot_data: BotCreate):
+    """Create a new bot."""
+    try:
+        db_manager = request.app.state.db_manager
+        bot_manager = request.app.state.bot_manager
+
+        # Generate bot ID
+        bot_id = id_generator.generate_bot_id()
+
+        # Prepare bot data for database
+        bot_dict = {
+            'bot_id': bot_id,
+            'name': bot_data.name,
+            'bot_type': bot_data.bot_type,
+            'status': 'inactive',
+            'target_user_url': bot_data.target_user_url,
+            'target_user_address': None,  # Will be extracted by bot
+            'max_trade_value': bot_data.max_trade_value,
+            'min_trade_value': bot_data.min_trade_value,
+            'copy_ratio': bot_data.copy_ratio,
+            'stop_loss_percentage': bot_data.stop_loss_percentage,
+            'max_daily_loss': bot_data.max_daily_loss,
+            'notes': bot_data.notes
+        }
+
+        # Create in database
+        created_bot = await db_manager.create_bot(bot_dict)
+
+        # Create bot instance in manager
+        await bot_manager.create_bot(created_bot)
+
+        return created_bot
+
+    except Exception as e:
+        logger.error("Error creating bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/bots/{bot_id}")
+async def get_bot(request: Request, bot_id: str):
+    """Get specific bot details."""
+    try:
+        db_manager = request.app.state.db_manager
+        bot = await db_manager.get_bot(bot_id)
+
+        if bot is None:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        return bot
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error getting bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/bots/{bot_id}")
+async def update_bot(request: Request, bot_id: str, update_data: BotUpdate):
+    """Update bot configuration."""
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Filter out None values
+        update_dict = {}
+        if update_data.name is not None:
+            update_dict['name'] = update_data.name
+        if update_data.max_trade_value is not None:
+            update_dict['max_trade_value'] = update_data.max_trade_value
+        if update_data.min_trade_value is not None:
+            update_dict['min_trade_value'] = update_data.min_trade_value
+        if update_data.copy_ratio is not None:
+            update_dict['copy_ratio'] = update_data.copy_ratio
+        if update_data.stop_loss_percentage is not None:
+            update_dict['stop_loss_percentage'] = update_data.stop_loss_percentage
+        if update_data.max_daily_loss is not None:
+            update_dict['max_daily_loss'] = update_data.max_daily_loss
+        if update_data.notes is not None:
+            update_dict['notes'] = update_data.notes
+
+        updated_bot = await db_manager.update_bot(bot_id, update_dict)
+
+        if updated_bot is None:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        return updated_bot
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error updating bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/bots/{bot_id}")
+async def delete_bot(request: Request, bot_id: str):
+    """Delete a bot."""
+    try:
+        db_manager = request.app.state.db_manager
+        bot_manager = request.app.state.bot_manager
+
+        # Remove from bot manager
+        await bot_manager.remove_bot(bot_id)
+
+        # Delete from database
+        result = await db_manager.delete_bot(bot_id)
+
+        if result == 0:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        return {"success": True, "message": "Bot deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error deleting bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bots/{bot_id}/start")
+async def start_bot(request: Request, bot_id: str, start_data: BotStart):
+    """Start a bot in specified mode."""
+    try:
+        db_manager = request.app.state.db_manager
+        bot_manager = request.app.state.bot_manager
+
+        # Get bot from manager or create it
+        bot = bot_manager.get_bot(bot_id)
+        if bot is None:
+            # Load from database and create instance
+            bot_data = await db_manager.get_bot(bot_id)
+            if bot_data is None:
+                raise HTTPException(status_code=404, detail="Bot not found")
+            bot = await bot_manager.create_bot(bot_data)
+
+        # Start bot
+        await bot_manager.start_bot(bot_id, _mode=start_data.mode)
+
+        # Update database status
+        await db_manager.update_bot(bot_id, {'status': start_data.mode})
+
+        return {"success": True, "bot_id": bot_id, "status": start_data.mode}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error starting bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bots/{bot_id}/stop")
+async def stop_bot(request: Request, bot_id: str):
+    """Stop a running bot."""
+    try:
+        db_manager = request.app.state.db_manager
+        bot_manager = request.app.state.bot_manager
+
+        # Stop bot
+        await bot_manager.stop_bot(bot_id)
+
+        # Update database status
+        await db_manager.update_bot(bot_id, {'status': 'inactive'})
+
+        return {"success": True, "bot_id": bot_id, "status": "inactive"}
+
+    except Exception as e:
+        logger.error("Error stopping bot: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Performance endpoints
+@router.get("/performance/aggregate")
+async def get_aggregate_performance(request: Request, mode: Optional[str] = None, period: Optional[str] = '1d'):
+    """Get aggregated performance data for charts."""
+    try:
+        # Placeholder implementation
+        return {
+            "data": [],
+            "mode": mode,
+            "period": period
+        }
+
+    except Exception as e:
+        logger.error("Error getting aggregate performance: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/bots/{bot_id}/performance")
+async def get_bot_performance(request: Request, bot_id: str, period: Optional[str] = '24h'):
+    """Get bot-specific performance history."""
+    try:
+        db_manager = request.app.state.db_manager
+        performance_data = await db_manager.get_performance_history(bot_id, _period=period)
+
+        return {"bot_id": bot_id, "period": period, "data": performance_data}
+
+    except Exception as e:
+        logger.error("Error getting bot performance: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/bots/{bot_id}/trades")
+async def get_bot_trades(request: Request, bot_id: str, limit: Optional[int] = 50, offset: Optional[int] = 0):
+    """Get trade history for a bot."""
+    try:
+        db_manager = request.app.state.db_manager
+        trades = await db_manager.get_bot_trades(bot_id, _limit=limit, _offset=offset)
+
+        return {"bot_id": bot_id, "trades": trades}
+
+    except Exception as e:
+        logger.error("Error getting bot trades: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Notes endpoint
+@router.put("/bots/{bot_id}/notes")
+async def update_notes(request: Request, bot_id: str, notes_data: NotesUpdate):
+    """Update bot notes."""
+    try:
+        db_manager = request.app.state.db_manager
+        updated_bot = await db_manager.update_bot(bot_id, {'notes': notes_data.notes})
+
+        if updated_bot is None:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        return {"success": True, "bot_id": bot_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error updating notes: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))

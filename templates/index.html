@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BotForm2 - Polymarket Copy Trading Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <div class="flex justify-between items-center">
+                <h1 class="text-4xl font-bold text-gray-800">BotForm2 Dashboard</h1>
+                <button id="newBotBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                    + New Bot
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <!-- Performance Metrics Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Total P/L</h3>
+                    <p id="totalPL" class="text-2xl font-bold text-green-600">$0.00</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Win Rate</h3>
+                    <p id="winRate" class="text-2xl font-bold text-gray-800">0.0%</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Total Bots</h3>
+                    <p id="totalBots" class="text-2xl font-bold text-gray-800">0</p>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Active Bots</h3>
+                    <p id="activeBots" class="text-2xl font-bold text-blue-600">0</p>
+                </div>
+            </div>
+
+            <!-- Performance Charts -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Paper Trading Performance</h2>
+                    <canvas id="paperChart"></canvas>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-semibold mb-4">Production Performance</h2>
+                    <canvas id="productionChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Bot List -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Your Bots</h2>
+                    <div class="flex gap-4">
+                        <select id="filterStatus" class="border rounded px-3 py-1">
+                            <option value="">All Status</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="paper">Paper</option>
+                            <option value="production">Production</option>
+                        </select>
+                        <select id="sortBy" class="border rounded px-3 py-1">
+                            <option value="created_at">Created Date</option>
+                            <option value="name">Name</option>
+                            <option value="total_profit">Profit (High-Low)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="botList" class="space-y-2">
+                    <p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Create Bot Modal (Simple) -->
+    <div id="createBotModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold mb-4">Create New Bot</h2>
+            <form id="createBotForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Bot Name</label>
+                    <input type="text" id="botName" class="shadow appearance-none border rounded w-full py-2 px-3" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Target User URL</label>
+                    <input type="url" id="targetUrl" class="shadow appearance-none border rounded w-full py-2 px-3" placeholder="https://polymarket.com/user/0x..." required>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">Create</button>
+                    <button type="button" id="cancelBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize charts
+        const paperCtx = document.getElementById('paperChart').getContext('2d');
+        const productionCtx = document.getElementById('productionChart').getContext('2d');
+
+        const chartConfig = {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Profit/Loss',
+                    data: [],
+                    borderColor: 'rgb(59, 130, 246)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true
+            }
+        };
+
+        const paperChart = new Chart(paperCtx, chartConfig);
+        const productionChart = new Chart(productionCtx, chartConfig);
+
+        // Load bots
+        async function loadBots() {
+            try {
+                const response = await fetch('/api/bots');
+                const data = await response.json();
+                const bots = data.bots || [];
+
+                // Update metrics
+                document.getElementById('totalBots').textContent = bots.length;
+                const activeBots = bots.filter(b => b.status !== 'inactive');
+                document.getElementById('activeBots').textContent = activeBots.length;
+
+                // Update bot list
+                const botList = document.getElementById('botList');
+                if (bots.length === 0) {
+                    botList.innerHTML = '<p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>';
+                } else {
+                    botList.innerHTML = bots.map(bot => `
+                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                            <div>
+                                <h3 class="font-semibold">${bot.name}</h3>
+                                <p class="text-sm text-gray-500">Status: ${bot.status}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-semibold text-${(bot.total_profit || 0) >= 0 ? 'green' : 'red'}-600">
+                                    $${(bot.total_profit || 0).toFixed(2)}
+                                </p>
+                                <p class="text-sm text-gray-500">${bot.total_trades || 0} trades</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading bots:', error);
+            }
+        }
+
+        // Modal controls
+        document.getElementById('newBotBtn').addEventListener('click', () => {
+            document.getElementById('createBotModal').classList.remove('hidden');
+        });
+
+        document.getElementById('cancelBtn').addEventListener('click', () => {
+            document.getElementById('createBotModal').classList.add('hidden');
+        });
+
+        // Create bot form
+        document.getElementById('createBotForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const botData = {
+                name: document.getElementById('botName').value,
+                bot_type: 'copy',
+                target_user_url: document.getElementById('targetUrl').value
+            };
+
+            try {
+                const response = await fetch('/api/bots', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(botData)
+                });
+
+                if (response.ok) {
+                    document.getElementById('createBotModal').classList.add('hidden');
+                    document.getElementById('createBotForm').reset();
+                    loadBots();
+                } else {
+                    alert('Failed to create bot');
+                }
+            } catch (error) {
+                console.error('Error creating bot:', error);
+                alert('Error creating bot');
+            }
+        });
+
+        // Load on page load
+        loadBots();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadBots, 30000);
+    </script>
+</body>
+</html>
