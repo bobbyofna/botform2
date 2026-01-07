@@ -298,3 +298,85 @@ async def update_notes(request: Request, bot_id: str, notes_data: NotesUpdate):
     except Exception as e:
         logger.error("Error updating notes: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Shutdown endpoint
+@router.post("/shutdown")
+async def shutdown_all_bots(request: Request):
+    """Gracefully stop all running bots."""
+    try:
+        bot_manager = request.app.state.bot_manager
+
+        stopped_count = 0
+        bot_ids = list(bot_manager.active_bots.keys())
+
+        i = 0
+        for bot_id in bot_ids:
+            try:
+                await bot_manager.stop_bot(bot_id)
+                stopped_count = stopped_count + 1
+            except Exception as e:
+                logger.error("Error stopping bot {}: {}".format(bot_id, str(e)))
+            i = i + 1
+
+        return {
+            "success": True,
+            "message": "Shutdown initiated",
+            "bots_stopped": stopped_count,
+            "total_bots": len(bot_ids)
+        }
+
+    except Exception as e:
+        logger.error("Error during shutdown: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# User validation endpoint
+@router.post("/validate-user")
+async def validate_user(request: Request, target_user_url: str = Body(..., embed=True)):
+    """Validate a Polymarket user address before creating bot."""
+    try:
+        polymarket_client = request.app.state.polymarket_client
+
+        # Extract address from URL
+        import re
+        match = re.search(r'/user/(0x[a-fA-F0-9]+)', target_user_url)
+        if match is None:
+            return {
+                "valid": False,
+                "message": "Invalid Polymarket user URL format. Expected: https://polymarket.com/user/0x..."
+            }
+
+        user_address = match.group(1)
+
+        # Validate the address
+        result = await polymarket_client.validate_user_address(user_address)
+
+        return result
+
+    except Exception as e:
+        logger.error("Error validating user: {}".format(str(e)))
+        return {
+            "valid": False,
+            "message": "Validation error: {}".format(str(e))
+        }
+
+
+# Get user recent activity
+@router.get("/user-activity/{user_address}")
+async def get_user_activity(request: Request, user_address: str, limit: Optional[int] = 10):
+    """Get recent trading activity for a user."""
+    try:
+        polymarket_client = request.app.state.polymarket_client
+
+        activities = await polymarket_client.get_user_recent_activity(user_address, _limit=limit)
+
+        return {
+            "user_address": user_address,
+            "activities": activities,
+            "count": len(activities)
+        }
+
+    except Exception as e:
+        logger.error("Error getting user activity: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))

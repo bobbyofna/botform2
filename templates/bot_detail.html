@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bot Detail - BotForm2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header with Back Button -->
+        <header class="mb-8">
+            <div class="flex items-center gap-4 mb-4">
+                <button onclick="window.location.href='/'" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+                    ← Back to Dashboard
+                </button>
+                <h1 id="botName" class="text-4xl font-bold text-gray-800">Loading...</h1>
+            </div>
+            <div class="flex gap-4 items-center">
+                <span id="statusBadge" class="px-4 py-2 rounded-lg text-white font-semibold">Loading</span>
+                <div id="healthCheck" class="text-sm"></div>
+            </div>
+        </header>
+
+        <main>
+            <!-- Control Buttons -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Bot Controls</h2>
+                <div class="flex gap-4">
+                    <button id="stopBtn" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                        Stop
+                    </button>
+                    <button id="startPaperBtn" class="bg-yellow-500 hover:bg-yellow-700 text-white font-bold py-2 px-6 rounded">
+                        Start (Paper)
+                    </button>
+                    <button id="startProdBtn" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-6 rounded">
+                        Start (Production)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Performance Chart -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Performance</h2>
+                    <div class="flex gap-2">
+                        <button class="period-btn px-3 py-1 rounded border" data-period="1h">1H</button>
+                        <button class="period-btn px-3 py-1 rounded border" data-period="24h">24H</button>
+                        <button class="period-btn px-3 py-1 rounded border bg-blue-500 text-white" data-period="7d">7D</button>
+                        <button class="period-btn px-3 py-1 rounded border" data-period="30d">30D</button>
+                    </div>
+                </div>
+                <canvas id="performanceChart"></canvas>
+            </div>
+
+            <!-- Bot Parameters -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Bot Parameters</h2>
+                <form id="parametersForm" class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Max Trade Value ($)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum amount per trade">(?)</span>
+                        </label>
+                        <input type="number" id="maxTradeValue" class="shadow border rounded w-full py-2 px-3" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Min Trade Value ($)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Minimum amount per trade">(?)</span>
+                        </label>
+                        <input type="number" id="minTradeValue" class="shadow border rounded w-full py-2 px-3" step="0.01">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Copy Ratio
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage of target trade size (0.0-1.0)">(?)</span>
+                        </label>
+                        <input type="number" id="copyRatio" class="shadow border rounded w-full py-2 px-3" step="0.01" min="0" max="1">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Stop Loss (%)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage loss to trigger exit">(?)</span>
+                        </label>
+                        <input type="number" id="stopLoss" class="shadow border rounded w-full py-2 px-3" step="0.1">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Max Daily Loss ($)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum total loss per day">(?)</span>
+                        </label>
+                        <input type="number" id="maxDailyLoss" class="shadow border rounded w-full py-2 px-3" step="0.01">
+                    </div>
+                    <div class="col-span-2 flex gap-2">
+                        <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded">
+                            Update Parameters
+                        </button>
+                        <button type="button" id="resetParams" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded">
+                            Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Notes Section -->
+            <div class="bg-white rounded-lg shadow p-6 mb-8">
+                <h2 class="text-xl font-semibold mb-4">Notes</h2>
+                <textarea id="botNotes" class="shadow border rounded w-full py-2 px-3" rows="5" placeholder="Add notes about this bot..."></textarea>
+                <p class="text-sm text-gray-500 mt-2">Auto-saves 2 seconds after you stop typing</p>
+            </div>
+
+            <!-- Recent Activity from Target User -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">Target User Recent Activity</h2>
+                <div id="recentActivity" class="space-y-2">
+                    <p class="text-gray-500">Loading activity...</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const botId = window.location.pathname.split('/').pop();
+        let botData = null;
+        let notesDebounceTimer = null;
+        let currentPeriod = '7d';
+
+        // Initialize performance chart
+        const ctx = document.getElementById('performanceChart').getContext('2d');
+        const performanceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Profit/Loss ($)',
+                    data: [],
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+
+        // Load bot data
+        async function loadBotData() {
+            try {
+                const response = await fetch('/api/bots/' + botId);
+                if (response.ok === false) {
+                    alert('Bot not found');
+                    window.location.href = '/';
+                    return;
+                }
+
+                botData = await response.json();
+
+                // Update header
+                document.getElementById('botName').textContent = botData.name;
+
+                // Update status badge
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.textContent = botData.status.toUpperCase();
+                if (botData.status === 'production') {
+                    statusBadge.className = 'px-4 py-2 rounded-lg text-white font-semibold bg-green-600';
+                } else if (botData.status === 'paper') {
+                    statusBadge.className = 'px-4 py-2 rounded-lg text-white font-semibold bg-yellow-600';
+                } else {
+                    statusBadge.className = 'px-4 py-2 rounded-lg text-white font-semibold bg-gray-600';
+                }
+
+                // Populate parameters form
+                document.getElementById('maxTradeValue').value = botData.max_trade_value || 500;
+                document.getElementById('minTradeValue').value = botData.min_trade_value || 50;
+                document.getElementById('copyRatio').value = botData.copy_ratio || 0.5;
+                document.getElementById('stopLoss').value = botData.stop_loss_percentage || 10;
+                document.getElementById('maxDailyLoss').value = botData.max_daily_loss || 1000;
+
+                // Populate notes
+                document.getElementById('botNotes').value = botData.notes || '';
+
+                // Load health check
+                await checkTargetUserHealth();
+
+                // Load recent activity
+                await loadRecentActivity();
+
+                // Load performance data
+                await loadPerformanceData();
+
+            } catch (error) {
+                console.error('Error loading bot:', error);
+                alert('Error loading bot data');
+            }
+        }
+
+        // Check target user health
+        async function checkTargetUserHealth() {
+            const healthDiv = document.getElementById('healthCheck');
+            healthDiv.innerHTML = '<span class="text-gray-500">Checking target user...</span>';
+
+            try {
+                const response = await fetch('/api/validate-user', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({target_user_url: botData.target_user_url})
+                });
+
+                const result = await response.json();
+
+                if (result.valid === true) {
+                    healthDiv.innerHTML = '<span class="text-green-600">✓ Target user: Active</span>';
+                } else {
+                    healthDiv.innerHTML = '<span class="text-red-600">✗ Target user: ' + result.message + '</span>';
+                }
+            } catch (error) {
+                healthDiv.innerHTML = '<span class="text-red-600">✗ Health check failed</span>';
+            }
+        }
+
+        // Load recent activity
+        async function loadRecentActivity() {
+            const activityDiv = document.getElementById('recentActivity');
+
+            if (botData.target_user_address === null) {
+                activityDiv.innerHTML = '<p class="text-gray-500">No target user address set yet</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/user-activity/' + botData.target_user_address + '?limit=10');
+                const data = await response.json();
+
+                if (data.activities.length === 0) {
+                    activityDiv.innerHTML = '<p class="text-gray-500">No recent activity</p>';
+                    return;
+                }
+
+                activityDiv.innerHTML = data.activities.map(activity => `
+                    <div class="border rounded p-3">
+                        <div class="flex justify-between">
+                            <span class="font-semibold">${activity.market_name || 'Unknown Market'}</span>
+                            <span class="text-sm text-gray-500">${new Date(activity.timestamp * 1000).toLocaleString()}</span>
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            ${activity.side || 'N/A'} • $${(activity.price || 0).toFixed(2)} • ${(activity.size || 0)} shares
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                activityDiv.innerHTML = '<p class="text-red-500">Error loading activity</p>';
+            }
+        }
+
+        // Load performance data
+        async function loadPerformanceData() {
+            try {
+                const response = await fetch('/api/bots/' + botId + '/performance?period=' + currentPeriod);
+                const data = await response.json();
+
+                if (data.data.length === 0) {
+                    performanceChart.data.labels = [];
+                    performanceChart.data.datasets[0].data = [];
+                } else {
+                    performanceChart.data.labels = data.data.map(d => new Date(d.timestamp).toLocaleString());
+                    performanceChart.data.datasets[0].data = data.data.map(d => d.total_profit);
+                }
+
+                performanceChart.update();
+            } catch (error) {
+                console.error('Error loading performance:', error);
+            }
+        }
+
+        // Period selectors
+        document.querySelectorAll('.period-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.period-btn').forEach(b => {
+                    b.classList.remove('bg-blue-500', 'text-white');
+                });
+                this.classList.add('bg-blue-500', 'text-white');
+                currentPeriod = this.dataset.period;
+                loadPerformanceData();
+            });
+        });
+
+        // Control buttons
+        document.getElementById('stopBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/bots/' + botId + '/stop', {method: 'POST'});
+                if (response.ok === true) {
+                    alert('Bot stopped');
+                    loadBotData();
+                }
+            } catch (error) {
+                alert('Error stopping bot');
+            }
+        });
+
+        document.getElementById('startPaperBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('/api/bots/' + botId + '/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mode: 'paper'})
+                });
+                if (response.ok === true) {
+                    alert('Bot started in paper mode');
+                    loadBotData();
+                }
+            } catch (error) {
+                alert('Error starting bot');
+            }
+        });
+
+        document.getElementById('startProdBtn').addEventListener('click', async () => {
+            if (confirm('Are you sure you want to start in PRODUCTION mode? This will use real money.') === false) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/bots/' + botId + '/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mode: 'production'})
+                });
+                if (response.ok === true) {
+                    alert('Bot started in production mode');
+                    loadBotData();
+                }
+            } catch (error) {
+                alert('Error starting bot');
+            }
+        });
+
+        // Update parameters
+        document.getElementById('parametersForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const updateData = {
+                max_trade_value: parseFloat(document.getElementById('maxTradeValue').value),
+                min_trade_value: parseFloat(document.getElementById('minTradeValue').value),
+                copy_ratio: parseFloat(document.getElementById('copyRatio').value),
+                stop_loss_percentage: parseFloat(document.getElementById('stopLoss').value),
+                max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value)
+            };
+
+            try {
+                const response = await fetch('/api/bots/' + botId, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updateData)
+                });
+
+                if (response.ok === true) {
+                    alert('Parameters updated successfully');
+                    loadBotData();
+                } else {
+                    alert('Failed to update parameters');
+                }
+            } catch (error) {
+                alert('Error updating parameters');
+            }
+        });
+
+        // Reset parameters
+        document.getElementById('resetParams').addEventListener('click', () => {
+            loadBotData();
+        });
+
+        // Auto-save notes with debounce
+        document.getElementById('botNotes').addEventListener('input', () => {
+            if (notesDebounceTimer !== null) {
+                clearTimeout(notesDebounceTimer);
+            }
+
+            notesDebounceTimer = setTimeout(async () => {
+                const notes = document.getElementById('botNotes').value;
+
+                try {
+                    await fetch('/api/bots/' + botId + '/notes', {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({notes: notes})
+                    });
+                } catch (error) {
+                    console.error('Error saving notes:', error);
+                }
+            }, 2000);
+        });
+
+        // Load data on page load
+        loadBotData();
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadBotData();
+        }, 30000);
+    </script>
+</body>
+</html>

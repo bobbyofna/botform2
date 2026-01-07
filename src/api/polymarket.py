@@ -22,11 +22,18 @@ class PolymarketClient:
         Args:
             _api_key: Polymarket API key
             _api_secret: Polymarket API secret
-            _base_url: Base URL for Polymarket API
+            _base_url: Base URL for Polymarket API (legacy)
         """
         self._api_key = _api_key
         self._api_secret = _api_secret
         self._base_url = _base_url
+
+        # Polymarket has 4 primary API services
+        self._clob_url = 'https://clob.polymarket.com'  # Central Limit Order Book
+        self._gamma_url = 'https://gamma-api.polymarket.com'  # Market data
+        self._strapi_url = 'https://strapi-matic.poly.market'  # Alternative endpoint
+        self._data_url = 'https://data-api.polymarket.com'  # Data API
+
         self._client = None
         self._logger = logging.getLogger(__name__)
 
@@ -223,4 +230,93 @@ class PolymarketClient:
             return data
         except Exception as e:
             self._logger.error("Failed to get positions: {}".format(str(e)))
+            return []
+
+    async def validate_user_address(self, _user_address):
+        """
+        Validate that a user address exists and can be accessed.
+        Tries to fetch user activity to verify the address is valid.
+
+        Args:
+            _user_address: Ethereum address to validate
+
+        Returns:
+            Dictionary with 'valid' (bool) and 'message' (str)
+        """
+        try:
+            # Create a separate client for this request to use correct base URL
+            async with httpx.AsyncClient(timeout=10.0) as temp_client:
+                # Try Strapi API for user activity (most reliable for user data)
+                url = "{}/api/users".format(self._strapi_url)
+                params = {'filters[address][$eq]': _user_address}
+
+                response = await temp_client.get(url, params=params)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    if 'data' in data and len(data['data']) > 0:
+                        return {
+                            'valid': True,
+                            'message': 'User found',
+                            'data': data['data'][0]
+                        }
+
+                # Try alternative: check if we can get any data about this address
+                # Using data API to look for trades
+                data_url = "{}/trades?maker={}".format(self._data_url, _user_address)
+                response2 = await temp_client.get(data_url)
+
+                if response2.status_code == 200:
+                    trades_data = response2.json()
+                    if trades_data and len(trades_data) > 0:
+                        return {
+                            'valid': True,
+                            'message': 'User found via trades',
+                            'data': trades_data[0]
+                        }
+
+                return {
+                    'valid': False,
+                    'message': 'User address not found or has no activity'
+                }
+
+        except Exception as e:
+            self._logger.error("User validation failed: {}".format(str(e)))
+            return {
+                'valid': False,
+                'message': 'Validation error: {}'.format(str(e))
+            }
+
+    async def get_user_recent_activity(self, _user_address, _limit=10):
+        """
+        Get recent trading activity for a user address.
+        Uses data API to fetch recent trades.
+
+        Args:
+            _user_address: Ethereum address of user
+            _limit: Number of recent activities to return
+
+        Returns:
+            List of recent activities
+        """
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as temp_client:
+                # Fetch trades from data API
+                url = "{}/trades".format(self._data_url)
+                params = {
+                    'maker': _user_address,
+                    '_limit': _limit,
+                    '_sort': 'timestamp:desc'
+                }
+
+                response = await temp_client.get(url, params=params)
+
+                if response.status_code == 200:
+                    trades = response.json()
+                    return trades if trades is not None else []
+
+                return []
+
+        except Exception as e:
+            self._logger.error("Failed to get user activity: {}".format(str(e)))
             return []

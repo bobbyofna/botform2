@@ -19,5 +19,5 @@ if __name__ == "__main__":
         host="127.0.0.1",
         port=8000,
         reload=False,  # Disable reload to avoid event loop issues
-        log_level="info"
+        log_config=None
     )

@@ -1,12 +1,7 @@
 -- BotForm2 Database Schema
 
--- Drop existing tables if they exist
-DROP TABLE IF EXISTS performance_snapshots CASCADE;
-DROP TABLE IF EXISTS trades CASCADE;
-DROP TABLE IF EXISTS bots CASCADE;
-
 -- Bots table
-CREATE TABLE bots (
+CREATE TABLE IF NOT EXISTS bots (
     id SERIAL PRIMARY KEY,
     bot_id VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
@@ -37,7 +32,7 @@ CREATE TABLE bots (
 );
 
 -- Trades table
-CREATE TABLE trades (
+CREATE TABLE IF NOT EXISTS trades (
     id SERIAL PRIMARY KEY,
     trade_id VARCHAR(50) UNIQUE NOT NULL,
     bot_id VARCHAR(50) REFERENCES bots(bot_id) ON DELETE CASCADE,
@@ -63,7 +58,7 @@ CREATE TABLE trades (
 );
 
 -- Performance snapshots table
-CREATE TABLE performance_snapshots (
+CREATE TABLE IF NOT EXISTS performance_snapshots (
     id SERIAL PRIMARY KEY,
     bot_id VARCHAR(50) REFERENCES bots(bot_id) ON DELETE CASCADE,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -77,10 +72,10 @@ CREATE TABLE performance_snapshots (
 );
 
 -- Create indexes for better query performance
-CREATE INDEX idx_bots_status ON bots(status);
-CREATE INDEX idx_bots_bot_id ON bots(bot_id);
-CREATE INDEX idx_trades_bot_id ON trades(bot_id);
-CREATE INDEX idx_trades_status ON trades(status);
-CREATE INDEX idx_trades_opened_at ON trades(opened_at);
-CREATE INDEX idx_performance_bot_id ON performance_snapshots(bot_id);
-CREATE INDEX idx_performance_timestamp ON performance_snapshots(timestamp);
+CREATE INDEX IF NOT EXISTS idx_bots_status ON bots(status);
+CREATE INDEX IF NOT EXISTS idx_bots_bot_id ON bots(bot_id);
+CREATE INDEX IF NOT EXISTS idx_trades_bot_id ON trades(bot_id);
+CREATE INDEX IF NOT EXISTS idx_trades_status ON trades(status);
+CREATE INDEX IF NOT EXISTS idx_trades_opened_at ON trades(opened_at);
+CREATE INDEX IF NOT EXISTS idx_performance_bot_id ON performance_snapshots(bot_id);
+CREATE INDEX IF NOT EXISTS idx_performance_timestamp ON performance_snapshots(timestamp);

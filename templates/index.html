@@ -77,21 +77,82 @@
         </main>
     </div>
 
-    <!-- Create Bot Modal (Simple) -->
-    <div id="createBotModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-        <div class="bg-white rounded-lg p-8 max-w-md w-full">
+    <!-- Create Bot Modal (Complete) -->
+    <div id="createBotModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
             <h2 class="text-2xl font-bold mb-4">Create New Bot</h2>
             <form id="createBotForm">
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Bot Name</label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Bot Name
+                        <span class="text-gray-400 font-normal text-xs ml-1" title="A friendly name to identify your bot">(?)</span>
+                    </label>
                     <input type="text" id="botName" class="shadow appearance-none border rounded w-full py-2 px-3" required>
                 </div>
+
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Target User URL</label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Target User URL
+                        <span class="text-gray-400 font-normal text-xs ml-1" title="Polymarket profile URL of the trader you want to copy">(?)</span>
+                    </label>
                     <input type="url" id="targetUrl" class="shadow appearance-none border rounded w-full py-2 px-3" placeholder="https://polymarket.com/user/0x..." required>
+                    <p id="validationMessage" class="text-sm mt-1 hidden"></p>
                 </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Max Trade Value ($)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum amount per trade in dollars">(?)</span>
+                        </label>
+                        <input type="number" id="maxTradeValue" class="shadow appearance-none border rounded w-full py-2 px-3" value="500" min="0" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Min Trade Value ($)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Minimum amount per trade in dollars">(?)</span>
+                        </label>
+                        <input type="number" id="minTradeValue" class="shadow appearance-none border rounded w-full py-2 px-3" value="50" min="0" step="0.01" required>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Copy Ratio
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage of target user's trade size to copy (0.0-1.0)">(?)</span>
+                        </label>
+                        <input type="number" id="copyRatio" class="shadow appearance-none border rounded w-full py-2 px-3" value="0.5" min="0" max="1" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Stop Loss (%)
+                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage loss to trigger automatic exit">(?)</span>
+                        </label>
+                        <input type="number" id="stopLoss" class="shadow appearance-none border rounded w-full py-2 px-3" value="10" min="0" max="100" step="0.1" required>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Max Daily Loss ($)
+                        <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum total loss allowed per day before bot stops">(?)</span>
+                    </label>
+                    <input type="number" id="maxDailyLoss" class="shadow appearance-none border rounded w-full py-2 px-3" value="1000" min="0" step="0.01" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Notes (Optional)
+                        <span class="text-gray-400 font-normal text-xs ml-1" title="Any notes or observations about this bot">(?)</span>
+                    </label>
+                    <textarea id="botNotes" class="shadow appearance-none border rounded w-full py-2 px-3" rows="3"></textarea>
+                </div>
+
                 <div class="flex gap-2">
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">Create</button>
+                    <button type="submit" id="createBotBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">
+                        Create
+                    </button>
                     <button type="button" id="cancelBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex-1">Cancel</button>
                 </div>
             </form>
@@ -141,7 +202,7 @@
                     botList.innerHTML = '<p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>';
                 } else {
                     botList.innerHTML = bots.map(bot => `
-                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center">
+                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center" onclick="window.location.href='/bot/${bot.bot_id}'">
                             <div>
                                 <h3 class="font-semibold">${bot.name}</h3>
                                 <p class="text-sm text-gray-500">Status: ${bot.status}</p>
@@ -173,29 +234,84 @@
         document.getElementById('createBotForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const botData = {
-                name: document.getElementById('botName').value,
-                bot_type: 'copy',
-                target_user_url: document.getElementById('targetUrl').value
-            };
+            const createBtn = document.getElementById('createBotBtn');
+            const validationMsg = document.getElementById('validationMessage');
+            const targetUrl = document.getElementById('targetUrl').value;
+
+            // Disable button and show loading state
+            createBtn.disabled = true;
+            createBtn.textContent = 'Validating...';
+            validationMsg.classList.add('hidden');
 
             try {
-                const response = await fetch('/api/bots', {
+                // Step 1: Validate user address
+                const validationResponse = await fetch('/api/validate-user', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({target_user_url: targetUrl})
+                });
+
+                const validationResult = await validationResponse.json();
+
+                if (validationResult.valid === false) {
+                    // Validation failed
+                    validationMsg.textContent = validationResult.message || 'Invalid user URL or user not found on Polymarket';
+                    validationMsg.classList.remove('hidden');
+                    validationMsg.classList.add('text-red-600');
+                    createBtn.disabled = false;
+                    createBtn.textContent = 'Create';
+                    return;
+                }
+
+                // Validation passed, show success
+                validationMsg.textContent = 'User validated successfully!';
+                validationMsg.classList.remove('hidden', 'text-red-600');
+                validationMsg.classList.add('text-green-600');
+
+                // Step 2: Create bot with all parameters
+                createBtn.textContent = 'Creating...';
+
+                const botData = {
+                    name: document.getElementById('botName').value,
+                    bot_type: 'copy',
+                    target_user_url: targetUrl,
+                    max_trade_value: parseFloat(document.getElementById('maxTradeValue').value),
+                    min_trade_value: parseFloat(document.getElementById('minTradeValue').value),
+                    copy_ratio: parseFloat(document.getElementById('copyRatio').value),
+                    stop_loss_percentage: parseFloat(document.getElementById('stopLoss').value),
+                    max_daily_loss: parseFloat(document.getElementById('maxDailyLoss').value),
+                    notes: document.getElementById('botNotes').value
+                };
+
+                const createResponse = await fetch('/api/bots', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(botData)
                 });
 
-                if (response.ok) {
+                if (createResponse.ok === true) {
+                    const createdBot = await createResponse.json();
+
+                    // Close modal and reset form
                     document.getElementById('createBotModal').classList.add('hidden');
                     document.getElementById('createBotForm').reset();
-                    loadBots();
+                    validationMsg.classList.add('hidden');
+
+                    // Redirect to bot detail page
+                    window.location.href = '/bot/' + createdBot.bot_id;
                 } else {
-                    alert('Failed to create bot');
+                    const errorData = await createResponse.json();
+                    alert('Failed to create bot: ' + (errorData.detail || 'Unknown error'));
+                    createBtn.disabled = false;
+                    createBtn.textContent = 'Create';
                 }
             } catch (error) {
                 console.error('Error creating bot:', error);
-                alert('Error creating bot');
+                validationMsg.textContent = 'Error: ' + error.message;
+                validationMsg.classList.remove('hidden', 'text-green-600');
+                validationMsg.classList.add('text-red-600');
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create';
             }
         });
 

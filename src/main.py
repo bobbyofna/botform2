@@ -136,15 +136,19 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Setup templates
 templates = Jinja2Templates(directory="templates")
 
-# Include API routes
-app.include_router(routes.router)
-
 
 # Homepage route
 @app.get("/", response_class=HTMLResponse)
 async def homepage(request: Request):
     """Serve homepage."""
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+# Bot detail page route
+@app.get("/bot/{bot_id}", response_class=HTMLResponse)
+async def bot_detail_page(request: Request, bot_id: str):
+    """Serve bot detail page."""
+    return templates.TemplateResponse("bot_detail.html", {"request": request, "bot_id": bot_id})
 
 
 # Health check endpoint
@@ -156,6 +160,10 @@ async def health_check():
         "version": "1.0.0",
         "environment": config.env
     }
+
+
+# Include API routes (after page routes to avoid conflicts)
+app.include_router(routes.router)
 
 
 if __name__ == "__main__":
