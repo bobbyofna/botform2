@@ -418,3 +418,89 @@ async def get_user_activity(request: Request, user_address: str, limit: Optional
     except Exception as e:
         logger.error("Error getting user activity: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# Trade management endpoints
+class TradeClose(BaseModel):
+    exit_price: float
+
+
+@router.post("/trades/{trade_id}/close")
+async def close_trade(request: Request, trade_id: str, close_data: TradeClose):
+    """Close an open trade with specified exit price."""
+    try:
+        bot_manager = request.app.state.bot_manager
+        db_manager = request.app.state.db_manager
+
+        # Get trade to find which bot owns it
+        trades = await db_manager.get_all_trades()
+        trade = next((t for t in trades if t['trade_id'] == trade_id), None)
+
+        if trade is None:
+            raise HTTPException(status_code=404, detail="Trade not found")
+
+        if trade['status'] != 'open':
+            raise HTTPException(status_code=400, detail="Trade is not open")
+
+        # Get bot instance
+        bot = bot_manager.get_bot(trade['bot_id'])
+        if bot is None:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        # Close the trade
+        closed_trade = await bot.close_trade(trade_id, close_data.exit_price)
+
+        if closed_trade is None:
+            raise HTTPException(status_code=500, detail="Failed to close trade")
+
+        return {"success": True, "trade": closed_trade}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error closing trade: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wallet/total")
+async def get_total_wallet_balance(request: Request):
+    """Get total paper trading wallet balance across all bots."""
+    try:
+        db_manager = request.app.state.db_manager
+        total_balance = await db_manager.get_total_paper_wallet_balance()
+
+        return {
+            "total_balance": total_balance,
+            "currency": "USD"
+        }
+
+    except Exception as e:
+        logger.error("Error getting total wallet balance: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wallet/{bot_id}/reset")
+async def reset_wallet_balance(request: Request, bot_id: str):
+    """Reset bot's paper trading wallet to initial balance."""
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Check if bot exists
+        bot = await db_manager.get_bot(bot_id)
+        if bot is None:
+            raise HTTPException(status_code=404, detail="Bot not found")
+
+        # Reset wallet
+        updated_bot = await db_manager.reset_paper_wallet(bot_id)
+
+        return {
+            "success": True,
+            "bot_id": bot_id,
+            "new_balance": float(updated_bot['paper_wallet_balance'])
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error resetting wallet: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))

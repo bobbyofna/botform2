@@ -529,3 +529,95 @@ class DatabaseManager:
         query = "{} ORDER BY timestamp ASC".format(query)
 
         return await self.fetch_all(query, params)
+
+    async def update_paper_wallet_balance(self, _bot_id, _amount, _operation='subtract'):
+        """
+        Update paper trading wallet balance.
+
+        Args:
+            _bot_id: Bot identifier
+            _amount: Amount to add or subtract
+            _operation: 'add' or 'subtract'
+
+        Returns:
+            Updated bot record with new balance
+        """
+        if _operation == 'add':
+            query = """
+                UPDATE bots
+                SET paper_wallet_balance = paper_wallet_balance + %(amount)s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE bot_id = %(bot_id)s
+                RETURNING *
+            """
+        else:
+            query = """
+                UPDATE bots
+                SET paper_wallet_balance = paper_wallet_balance - %(amount)s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE bot_id = %(bot_id)s
+                RETURNING *
+            """
+
+        result = await self.fetch(query, {'bot_id': _bot_id, 'amount': _amount})
+        self._logger.info("Updated paper wallet for bot {}: {} ${}".format(
+            _bot_id, _operation, _amount
+        ))
+        return result
+
+    async def get_paper_wallet_balance(self, _bot_id):
+        """
+        Get current paper trading wallet balance.
+
+        Args:
+            _bot_id: Bot identifier
+
+        Returns:
+            Current balance as float
+        """
+        query = """
+            SELECT paper_wallet_balance
+            FROM bots
+            WHERE bot_id = %(bot_id)s
+        """
+        result = await self.fetch(query, {'bot_id': _bot_id})
+        if result:
+            return float(result['paper_wallet_balance'])
+        return None
+
+    async def get_total_paper_wallet_balance(self):
+        """
+        Get total paper trading wallet balance across all bots.
+
+        Returns:
+            Total balance as float
+        """
+        query = """
+            SELECT SUM(paper_wallet_balance) as total_balance
+            FROM bots
+        """
+        result = await self.fetch(query, {})
+        if result and result['total_balance'] is not None:
+            return float(result['total_balance'])
+        return 0.0
+
+    async def reset_paper_wallet(self, _bot_id):
+        """
+        Reset paper trading wallet to initial balance.
+
+        Args:
+            _bot_id: Bot identifier
+
+        Returns:
+            Updated bot record
+        """
+        query = """
+            UPDATE bots
+            SET paper_wallet_balance = paper_wallet_initial,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE bot_id = %(bot_id)s
+            RETURNING *
+        """
+        result = await self.fetch(query, {'bot_id': _bot_id})
+        self._logger.info("Reset paper wallet for bot: {}".format(_bot_id))
+        return result

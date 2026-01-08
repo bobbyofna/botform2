@@ -6,13 +6,23 @@
     <title>BotForm2 - Polymarket Copy Trading Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="/static/css/styles.css">
 </head>
-<body class="bg-gray-100">
+<body>
+    <!-- Video Background -->
+    <div class="video-background">
+        <video autoplay loop muted playsinline id="bgVideo">
+            <source src="/bg.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- Page Container -->
+    <div class="page-container">
     <div class="container mx-auto px-4 py-8">
         <header class="mb-8">
             <div class="flex justify-between items-center">
-                <h1 class="text-4xl font-bold text-gray-800">BotForm2 Dashboard</h1>
-                <button id="newBotBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                <h1 class="text-4xl font-bold text-white">BotForm2 Dashboard</h1>
+                <button id="newBotBtn" class="btn btn-primary">
                     + New Bot
                 </button>
             </div>
@@ -20,41 +30,45 @@
 
         <main>
             <!-- Performance Metrics Summary -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Total P/L</h3>
-                    <p id="totalPL" class="text-2xl font-bold text-green-600">$0.00</p>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+                <div class="metric-card">
+                    <h3 class="metric-label">Wallet Balance</h3>
+                    <p id="walletBalance" class="metric-value text-yellow">$0.00</p>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Win Rate</h3>
-                    <p id="winRate" class="text-2xl font-bold text-gray-800">0.0%</p>
+                <div class="metric-card">
+                    <h3 class="metric-label">Total P/L</h3>
+                    <p id="totalPL" class="metric-value text-green">$0.00</p>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Total Bots</h3>
-                    <p id="totalBots" class="text-2xl font-bold text-gray-800">0</p>
+                <div class="metric-card">
+                    <h3 class="metric-label">Win Rate</h3>
+                    <p id="winRate" class="metric-value text-white">0.0%</p>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-gray-500 text-sm font-semibold mb-2">Active Bots</h3>
-                    <p id="activeBots" class="text-2xl font-bold text-blue-600">0</p>
+                <div class="metric-card">
+                    <h3 class="metric-label">Total Bots</h3>
+                    <p id="totalBots" class="metric-value text-white">0</p>
+                </div>
+                <div class="metric-card">
+                    <h3 class="metric-label">Active Bots</h3>
+                    <p id="activeBots" class="metric-value text-blue">0</p>
                 </div>
             </div>
 
             <!-- Performance Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Paper Trading Performance</h2>
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Paper Trading Performance</h2>
                     <canvas id="paperChart"></canvas>
                 </div>
-                <div class="bg-white rounded-lg shadow p-6">
-                    <h2 class="text-xl font-semibold mb-4">Production Performance</h2>
+                <div class="card p-6">
+                    <h2 class="text-xl font-semibold mb-4 text-white">Production Performance</h2>
                     <canvas id="productionChart"></canvas>
                 </div>
             </div>
 
             <!-- Bot List -->
-            <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <div class="card p-6 mb-8">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold">Your Bots</h2>
+                    <h2 class="text-xl font-semibold text-white">Your Bots</h2>
                     <div class="flex gap-4">
                         <select id="filterStatus" class="border rounded px-3 py-1">
                             <option value="">All Status</option>
@@ -71,31 +85,31 @@
                 </div>
 
                 <div id="botList" class="space-y-2">
-                    <p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>
+                    <p class="text-gray text-center py-8">No bots yet. Create your first bot to get started!</p>
                 </div>
             </div>
 
             <!-- Recent Activity Section -->
-            <div class="bg-white rounded-lg shadow p-6 mb-8">
-                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('recentActivity')">
-                    <h2 class="text-xl font-semibold">Recent Activity</h2>
+            <div class="card p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer section-header" onclick="toggleSection('recentActivity')">
+                    <h2 class="text-xl font-semibold text-white">Recent Activity</h2>
                     <svg id="recentActivityArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </div>
                 <div id="recentActivityPreview" class="space-y-2">
-                    <p class="text-gray-500 text-center py-4">Loading recent activity...</p>
+                    <p class="text-gray text-center py-4">Loading recent activity...</p>
                 </div>
                 <div id="recentActivityExpanded" class="hidden">
                     <div id="recentActivityList" class="space-y-2 mb-4">
                         <!-- Activity items will be loaded here -->
                     </div>
                     <div id="recentActivityPagination" class="flex justify-between items-center">
-                        <button onclick="changePage('recentActivity', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="recentActivityPrevBtn">
+                        <button onclick="changePage('recentActivity', -1)" class="btn btn-secondary disabled:opacity-50" id="recentActivityPrevBtn">
                             ← Previous
                         </button>
-                        <span id="recentActivityPageInfo" class="text-sm text-gray-600">Page 1</span>
-                        <button onclick="changePage('recentActivity', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="recentActivityNextBtn">
+                        <span id="recentActivityPageInfo" class="text-sm text-gray">Page 1</span>
+                        <button onclick="changePage('recentActivity', 1)" class="btn btn-secondary disabled:opacity-50" id="recentActivityNextBtn">
                             Next →
                         </button>
                     </div>
@@ -103,26 +117,26 @@
             </div>
 
             <!-- Open Bets Section -->
-            <div class="bg-white rounded-lg shadow p-6 mb-8">
-                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('openBets')">
-                    <h2 class="text-xl font-semibold">Open Bets</h2>
-                    <svg id="openBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="card p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer section-header" onclick="toggleSection('openBets')">
+                    <h2 class="text-xl font-semibold text-white">Open Bets</h2>
+                    <svg id="openBetsArrow" class="w-6 h-6 transform transition-transform section-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </div>
                 <div id="openBetsPreview" class="space-y-2">
-                    <p class="text-gray-500 text-center py-4">Loading open bets...</p>
+                    <p class="text-gray text-center py-4">Loading open bets...</p>
                 </div>
                 <div id="openBetsExpanded" class="hidden">
                     <div id="openBetsList" class="space-y-2 mb-4">
                         <!-- Open bet items will be loaded here -->
                     </div>
                     <div id="openBetsPagination" class="flex justify-between items-center">
-                        <button onclick="changePage('openBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsPrevBtn">
+                        <button onclick="changePage('openBets', -1)" class="btn btn-secondary disabled:opacity-50" id="openBetsPrevBtn">
                             ← Previous
                         </button>
-                        <span id="openBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
-                        <button onclick="changePage('openBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="openBetsNextBtn">
+                        <span id="openBetsPageInfo" class="text-sm text-gray">Page 1</span>
+                        <button onclick="changePage('openBets', 1)" class="btn btn-secondary disabled:opacity-50" id="openBetsNextBtn">
                             Next →
                         </button>
                     </div>
@@ -130,26 +144,26 @@
             </div>
 
             <!-- Closed Bets Section -->
-            <div class="bg-white rounded-lg shadow p-6 mb-8">
-                <div class="flex justify-between items-center mb-4 cursor-pointer" onclick="toggleSection('closedBets')">
-                    <h2 class="text-xl font-semibold">Closed Bets</h2>
-                    <svg id="closedBetsArrow" class="w-6 h-6 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="card p-6 mb-8">
+                <div class="flex justify-between items-center mb-4 cursor-pointer section-header" onclick="toggleSection('closedBets')">
+                    <h2 class="text-xl font-semibold text-white">Closed Bets</h2>
+                    <svg id="closedBetsArrow" class="w-6 h-6 transform transition-transform section-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 </div>
                 <div id="closedBetsPreview" class="space-y-2">
-                    <p class="text-gray-500 text-center py-4">Loading closed bets...</p>
+                    <p class="text-gray text-center py-4">Loading closed bets...</p>
                 </div>
                 <div id="closedBetsExpanded" class="hidden">
                     <div id="closedBetsList" class="space-y-2 mb-4">
                         <!-- Closed bet items will be loaded here -->
                     </div>
                     <div id="closedBetsPagination" class="flex justify-between items-center">
-                        <button onclick="changePage('closedBets', -1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsPrevBtn">
+                        <button onclick="changePage('closedBets', -1)" class="btn btn-secondary disabled:opacity-50" id="closedBetsPrevBtn">
                             ← Previous
                         </button>
-                        <span id="closedBetsPageInfo" class="text-sm text-gray-600">Page 1</span>
-                        <button onclick="changePage('closedBets', 1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded disabled:opacity-50" id="closedBetsNextBtn">
+                        <span id="closedBetsPageInfo" class="text-sm text-gray">Page 1</span>
+                        <button onclick="changePage('closedBets', 1)" class="btn btn-secondary disabled:opacity-50" id="closedBetsNextBtn">
                             Next →
                         </button>
                     </div>
@@ -159,88 +173,100 @@
     </div>
 
     <!-- Create Bot Modal (Complete) -->
-    <div id="createBotModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white rounded-lg p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
-            <h2 class="text-2xl font-bold mb-4">Create New Bot</h2>
+    <div id="createBotModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
+        <div class="modal-content p-8 max-w-2xl w-full max-h-screen overflow-y-auto">
+            <h2 class="text-2xl font-bold mb-4 text-white">Create New Bot</h2>
             <form id="createBotForm">
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                    <label class="block text-white text-sm font-bold mb-2">
                         Bot Name
-                        <span class="text-gray-400 font-normal text-xs ml-1" title="A friendly name to identify your bot">(?)</span>
+                        <span class="text-gray font-normal text-xs ml-1" title="A friendly name to identify your bot">(?)</span>
                     </label>
-                    <input type="text" id="botName" class="shadow appearance-none border rounded w-full py-2 px-3" required>
+                    <input type="text" id="botName" class="w-full py-2 px-3" required>
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                    <label class="block text-white text-sm font-bold mb-2">
                         Target User Address or URL
-                        <span class="text-gray-400 font-normal text-xs ml-1" title="Ethereum address (0x...) or Polymarket profile URL">(?)</span>
+                        <span class="text-gray font-normal text-xs ml-1" title="Ethereum address (0x...) or Polymarket profile URL">(?)</span>
                     </label>
-                    <input type="text" id="targetUrl" class="shadow appearance-none border rounded w-full py-2 px-3" placeholder="0xa20b482f97063f4f88ef621c9203e60814399940 or https://polymarket.com/user/0x..." required>
+                    <input type="text" id="targetUrl" class="w-full py-2 px-3" placeholder="0xa20b482f97063f4f88ef621c9203e60814399940 or https://polymarket.com/user/0x..." required>
                     <p id="validationMessage" class="text-sm mt-1 hidden"></p>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <label class="block text-white text-sm font-bold mb-2">
                             Max Trade Value ($)
-                            <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum amount per trade in dollars">(?)</span>
+                            <span class="text-gray font-normal text-xs ml-1" title="Maximum amount per trade in dollars">(?)</span>
                         </label>
-                        <input type="number" id="maxTradeValue" class="shadow appearance-none border rounded w-full py-2 px-3" value="500" min="0" step="0.01" required>
+                        <input type="number" id="maxTradeValue" class="w-full py-2 px-3" value="500" min="0" step="0.01" required>
                     </div>
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <label class="block text-white text-sm font-bold mb-2">
                             Min Trade Value ($)
-                            <span class="text-gray-400 font-normal text-xs ml-1" title="Minimum amount per trade in dollars">(?)</span>
+                            <span class="text-gray font-normal text-xs ml-1" title="Minimum amount per trade in dollars">(?)</span>
                         </label>
-                        <input type="number" id="minTradeValue" class="shadow appearance-none border rounded w-full py-2 px-3" value="50" min="0" step="0.01" required>
+                        <input type="number" id="minTradeValue" class="w-full py-2 px-3" value="50" min="0" step="0.01" required>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <label class="block text-white text-sm font-bold mb-2">
                             Copy Ratio
-                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage of target user's trade size to copy (0.0-1.0)">(?)</span>
+                            <span class="text-gray font-normal text-xs ml-1" title="Percentage of target user's trade size to copy (0.0-1.0)">(?)</span>
                         </label>
-                        <input type="number" id="copyRatio" class="shadow appearance-none border rounded w-full py-2 px-3" value="0.5" min="0" max="1" step="0.01" required>
+                        <input type="number" id="copyRatio" class="w-full py-2 px-3" value="0.5" min="0" max="1" step="0.01" required>
                     </div>
                     <div>
-                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <label class="block text-white text-sm font-bold mb-2">
                             Stop Loss (%)
-                            <span class="text-gray-400 font-normal text-xs ml-1" title="Percentage loss to trigger automatic exit">(?)</span>
+                            <span class="text-gray font-normal text-xs ml-1" title="Percentage loss to trigger automatic exit">(?)</span>
                         </label>
-                        <input type="number" id="stopLoss" class="shadow appearance-none border rounded w-full py-2 px-3" value="10" min="0" max="100" step="0.1" required>
+                        <input type="number" id="stopLoss" class="w-full py-2 px-3" value="10" min="0" max="100" step="0.1" required>
                     </div>
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                    <label class="block text-white text-sm font-bold mb-2">
                         Max Daily Loss ($)
-                        <span class="text-gray-400 font-normal text-xs ml-1" title="Maximum total loss allowed per day before bot stops">(?)</span>
+                        <span class="text-gray font-normal text-xs ml-1" title="Maximum total loss allowed per day before bot stops">(?)</span>
                     </label>
-                    <input type="number" id="maxDailyLoss" class="shadow appearance-none border rounded w-full py-2 px-3" value="1000" min="0" step="0.01" required>
+                    <input type="number" id="maxDailyLoss" class="w-full py-2 px-3" value="1000" min="0" step="0.01" required>
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                    <label class="block text-white text-sm font-bold mb-2">
                         Notes (Optional)
-                        <span class="text-gray-400 font-normal text-xs ml-1" title="Any notes or observations about this bot">(?)</span>
+                        <span class="text-gray font-normal text-xs ml-1" title="Any notes or observations about this bot">(?)</span>
                     </label>
-                    <textarea id="botNotes" class="shadow appearance-none border rounded w-full py-2 px-3" rows="3"></textarea>
+                    <textarea id="botNotes" class="w-full py-2 px-3" rows="3"></textarea>
                 </div>
 
                 <div class="flex gap-2">
-                    <button type="submit" id="createBotBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex-1">
+                    <button type="submit" id="createBotBtn" class="btn btn-primary flex-1">
                         Create
                     </button>
-                    <button type="button" id="cancelBtn" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded flex-1">Cancel</button>
+                    <button type="button" id="cancelBtn" class="btn btn-secondary flex-1">Cancel</button>
                 </div>
             </form>
         </div>
     </div>
+    </div>
 
     <script>
+        // Lazy load video background
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('bgVideo');
+            if (video && video.getAttribute('src') === null) {
+                const source = video.querySelector('source');
+                if (source) {
+                    video.load();
+                }
+            }
+        });
+
         // Initialize charts
         const paperCtx = document.getElementById('paperChart').getContext('2d');
         const productionCtx = document.getElementById('productionChart').getContext('2d');
@@ -253,12 +279,31 @@
                     label: 'Profit/Loss',
                     data: [],
                     borderColor: 'rgb(59, 130, 246)',
-                    tension: 0.1
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.1,
+                    fill: true
                 }]
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: true
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: 'rgb(255, 255, 255)'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: 'rgb(156, 163, 175)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    },
+                    y: {
+                        ticks: { color: 'rgb(156, 163, 175)' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    }
+                }
             }
         };
 
@@ -272,7 +317,20 @@
                 const data = await response.json();
                 const bots = data.bots || [];
 
+                // Calculate aggregate metrics
+                const totalWalletBalance = bots.reduce((sum, bot) => sum + (bot.paper_wallet_balance || 0), 0);
+                const totalProfit = bots.reduce((sum, bot) => sum + (bot.total_profit || 0), 0);
+                const totalLoss = bots.reduce((sum, bot) => sum + (bot.total_loss || 0), 0);
+                const netPL = totalProfit - totalLoss;
+                const totalTrades = bots.reduce((sum, bot) => sum + (bot.total_trades || 0), 0);
+                const totalWinningTrades = bots.reduce((sum, bot) => sum + (bot.winning_trades || 0), 0);
+                const winRate = totalTrades > 0 ? (totalWinningTrades / totalTrades * 100) : 0;
+
                 // Update metrics
+                document.getElementById('walletBalance').textContent = `$${totalWalletBalance.toFixed(2)}`;
+                document.getElementById('totalPL').textContent = `$${netPL.toFixed(2)}`;
+                document.getElementById('totalPL').className = `metric-value ${netPL >= 0 ? 'text-green' : 'text-red'}`;
+                document.getElementById('winRate').textContent = `${winRate.toFixed(1)}%`;
                 document.getElementById('totalBots').textContent = bots.length;
                 const activeBots = bots.filter(b => b.status !== 'inactive');
                 document.getElementById('activeBots').textContent = activeBots.length;
@@ -280,19 +338,21 @@
                 // Update bot list
                 const botList = document.getElementById('botList');
                 if (bots.length === 0) {
-                    botList.innerHTML = '<p class="text-gray-500 text-center py-8">No bots yet. Create your first bot to get started!</p>';
+                    botList.innerHTML = '<p class="text-gray text-center py-8">No bots yet. Create your first bot to get started!</p>';
                 } else {
                     botList.innerHTML = bots.map(bot => `
-                        <div class="border rounded p-4 hover:bg-gray-50 cursor-pointer flex justify-between items-center" onclick="window.location.href='/bot/${bot.bot_id}'">
+                        <div class="bot-list-item flex justify-between items-center" onclick="window.location.href='/bot/${bot.bot_id}'">
                             <div>
-                                <h3 class="font-semibold">${bot.name}</h3>
-                                <p class="text-sm text-gray-500">Status: ${bot.status}</p>
+                                <h3 class="font-semibold text-white">${bot.name}</h3>
+                                <div class="flex gap-2 mt-1">
+                                    <span class="badge badge-${bot.status}">${bot.status.toUpperCase()}</span>
+                                </div>
                             </div>
                             <div class="text-right">
-                                <p class="font-semibold text-${(bot.total_profit || 0) >= 0 ? 'green' : 'red'}-600">
+                                <p class="font-semibold ${(bot.total_profit || 0) >= 0 ? 'text-green' : 'text-red'}">
                                     $${(bot.total_profit || 0).toFixed(2)}
                                 </p>
-                                <p class="text-sm text-gray-500">${bot.total_trades || 0} trades</p>
+                                <p class="text-sm text-gray">${bot.total_trades || 0} trades</p>
                             </div>
                         </div>
                     `).join('');
@@ -497,27 +557,27 @@
         function renderTradeItem(trade) {
             const profitLoss = trade.profit_loss || 0;
             const isProfitable = profitLoss >= 0;
-            const colorClass = isProfitable ? 'text-green-600' : 'text-red-600';
+            const colorClass = isProfitable ? 'text-green' : 'text-red';
 
             return `
-                <div class="border rounded p-3 hover:bg-gray-50">
+                <div class="bot-list-item">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
                             <div class="flex items-center gap-2">
-                                <span class="font-semibold">${trade.bot_name || 'Unknown Bot'}</span>
-                                <span class="text-xs bg-${trade.is_paper_trade ? 'blue' : 'green'}-100 text-${trade.is_paper_trade ? 'blue' : 'green'}-800 px-2 py-1 rounded">
+                                <span class="font-semibold text-white">${trade.bot_name || 'Unknown Bot'}</span>
+                                <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
                                     ${trade.is_paper_trade ? 'Paper' : 'Production'}
                                 </span>
-                                ${trade.status === 'open' ? '<span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">Open</span>' : ''}
-                                ${trade.status === 'closed' ? '<span class="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">Closed</span>' : ''}
+                                ${trade.status === 'open' ? '<span class="badge badge-open">Open</span>' : ''}
+                                ${trade.status === 'closed' ? '<span class="badge badge-closed">Closed</span>' : ''}
                             </div>
-                            <p class="text-sm text-gray-600 mt-1">Market: ${trade.market_id || 'N/A'}</p>
-                            <p class="text-sm text-gray-600">Outcome: ${trade.outcome || 'N/A'}</p>
-                            <p class="text-xs text-gray-400 mt-1">${formatTimestamp(trade.opened_at)}</p>
+                            <p class="text-sm text-gray mt-1">Market: ${trade.market_id || 'N/A'}</p>
+                            <p class="text-sm text-gray">Outcome: ${trade.outcome || 'N/A'}</p>
+                            <p class="text-xs text-gray mt-1">${formatTimestamp(trade.opened_at)}</p>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm text-gray-600">Amount: $${(trade.amount || 0).toFixed(2)}</p>
-                            <p class="text-sm text-gray-600">Price: ${(trade.price || 0).toFixed(3)}</p>
+                            <p class="text-sm text-gray">Amount: $${(trade.amount || 0).toFixed(2)}</p>
+                            <p class="text-sm text-gray">Price: ${(trade.price || 0).toFixed(3)}</p>
                             ${trade.status === 'closed' ? `<p class="text-sm font-semibold ${colorClass}">P/L: $${profitLoss.toFixed(2)}</p>` : ''}
                         </div>
                     </div>

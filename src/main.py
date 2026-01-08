@@ -7,13 +7,14 @@ Main web server and API implementation.
 import logging
 import asyncio
 import sys
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 
 from .config import config
 from .database.manager import DatabaseManager
@@ -136,6 +137,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Setup templates
 templates = Jinja2Templates(directory="templates")
 
+
+# Video background route
+@app.get("/bg.mp4")
+async def get_background_video():
+    """Serve background video."""
+    video_path = os.path.join(os.getcwd(), "bg.mp4")
+    if os.path.exists(video_path):
+        return FileResponse(video_path, media_type="video/mp4")
+    else:
+        logger.error("Background video not found at: {}".format(video_path))
+        raise HTTPException(status_code=404, detail="Video not found")
 
 # Homepage route
 @app.get("/", response_class=HTMLResponse)

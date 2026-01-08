@@ -28,7 +28,11 @@ CREATE TABLE IF NOT EXISTS bots (
     total_trades INTEGER DEFAULT 0,
     winning_trades INTEGER DEFAULT 0,
     total_profit DECIMAL(10, 2) DEFAULT 0.00,
-    total_loss DECIMAL(10, 2) DEFAULT 0.00
+    total_loss DECIMAL(10, 2) DEFAULT 0.00,
+
+    -- Paper trading wallet
+    paper_wallet_balance DECIMAL(10, 2) DEFAULT 1000.00,
+    paper_wallet_initial DECIMAL(10, 2) DEFAULT 1000.00
 );
 
 -- Trades table
@@ -43,6 +47,7 @@ CREATE TABLE IF NOT EXISTS trades (
     outcome VARCHAR(50),
     amount DECIMAL(10, 2),
     price DECIMAL(10, 6),
+    exit_price DECIMAL(10, 6),
 
     -- Timestamps
     opened_at TIMESTAMP NOT NULL,
