@@ -6,7 +6,16 @@ PYTHON = venv/bin/python3
 PORT = 80
 PG_SERVICE = postgresql
 
-.PHONY: stop start restart reboot status logs
+.PHONY: stop start restart reboot status logs setup-users install
+
+install:
+	@echo "Installing dependencies..."
+	@$(PYTHON) -m pip install -q -r requirements.txt
+	@echo "✓ Dependencies installed"
+
+setup-users:
+	@echo "Setting up initial users..."
+	@$(PYTHON) setup_initial_users.py
 
 stop:
 	@echo "Stopping BotForm2 server..."

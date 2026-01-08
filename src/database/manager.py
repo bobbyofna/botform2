@@ -289,11 +289,11 @@ class DatabaseManager:
         """
         query = """
             INSERT INTO trades (
-                trade_id, bot_id, is_paper_trade, market_id, outcome,
-                amount, price, opened_at, status, source_trade_id, target_trade_id
+                trade_id, bot_id, is_paper_trade, market_id, market_name, outcome,
+                amount, price, opened_at, status, source_trade_id, target_trade_id, close_value
             ) VALUES (
-                %(trade_id)s, %(bot_id)s, %(is_paper_trade)s, %(market_id)s, %(outcome)s,
-                %(amount)s, %(price)s, %(opened_at)s, %(status)s, %(source_trade_id)s, %(target_trade_id)s
+                %(trade_id)s, %(bot_id)s, %(is_paper_trade)s, %(market_id)s, %(market_name)s, %(outcome)s,
+                %(amount)s, %(price)s, %(opened_at)s, %(status)s, %(source_trade_id)s, %(target_trade_id)s, %(close_value)s
             )
             RETURNING *
         """
@@ -601,25 +601,37 @@ class DatabaseManager:
             return float(result['total_balance'])
         return 0.0
 
-    async def reset_paper_wallet(self, _bot_id):
+    async def reset_paper_wallet(self, _bot_id, _custom_amount=None):
         """
-        Reset paper trading wallet to initial balance.
+        Reset paper trading wallet to initial balance or custom amount.
 
         Args:
             _bot_id: Bot identifier
+            _custom_amount: Optional custom amount to set (if None, uses initial balance)
 
         Returns:
             Updated bot record
         """
-        query = """
-            UPDATE bots
-            SET paper_wallet_balance = paper_wallet_initial,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE bot_id = %(bot_id)s
-            RETURNING *
-        """
-        result = await self.fetch(query, {'bot_id': _bot_id})
-        self._logger.info("Reset paper wallet for bot: {}".format(_bot_id))
+        if _custom_amount is not None:
+            query = """
+                UPDATE bots
+                SET paper_wallet_balance = %(custom_amount)s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE bot_id = %(bot_id)s
+                RETURNING *
+            """
+            result = await self.fetch(query, {'bot_id': _bot_id, 'custom_amount': _custom_amount})
+            self._logger.info("Set paper wallet for bot {} to: ${}".format(_bot_id, _custom_amount))
+        else:
+            query = """
+                UPDATE bots
+                SET paper_wallet_balance = paper_wallet_initial,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE bot_id = %(bot_id)s
+                RETURNING *
+            """
+            result = await self.fetch(query, {'bot_id': _bot_id})
+            self._logger.info("Reset paper wallet for bot: {}".format(_bot_id))
         return result
 
     # User management methods
@@ -691,7 +703,7 @@ class DatabaseManager:
         password_hash = auth_manager.hash_password(_password)
 
         # Generate user ID
-        user_id = id_generator.generate_id('user')
+        user_id = id_generator.generate('USR')
 
         query = """
             INSERT INTO users (user_id, username, password_hash, role)

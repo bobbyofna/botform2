@@ -4,9 +4,9 @@
 
 **ALL server operations MUST use the following Makefile commands:**
 
-- `make start` - Start the server
-- `make stop` - Stop the server
-- `make reload` - Restart the server
+- `sudo make start` - Start the server
+- `sudo make stop` - Stop the server
+- `sudo make reload` - Restart the server
 
 ## Do NOT Use
 
@@ -25,4 +25,4 @@ The Makefile provides a standardized interface for server management that:
 
 ## Additional Commands
 
-Run `make help` to see all available Makefile commands.
+Run `sudo make help` to see all available Makefile commands.

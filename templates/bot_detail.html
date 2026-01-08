@@ -47,6 +47,10 @@
                         <div id="headerStatus" class="font-semibold text-white">Inactive</div>
                     </div>
                     <div class="text-center">
+                        <div class="text-gray-400 text-xs">Wallet</div>
+                        <div id="headerWalletBalance" class="font-semibold text-yellow-400">$0.00</div>
+                    </div>
+                    <div class="text-center">
                         <div class="text-gray-400 text-xs">Total P/L</div>
                         <div id="headerBotPL" class="font-semibold text-green-400">$0.00</div>
                     </div>
@@ -171,6 +175,9 @@
                         {% if is_admin %}
                         <button id="editParamsBtn" class="btn btn-primary w-full mt-4">
                             Edit Parameters
+                        </button>
+                        <button id="resetWalletBtn" class="btn btn-secondary w-full mt-2 hidden">
+                            Reset Wallet Balance
                         </button>
                         {% else %}
                         <button disabled class="btn btn-secondary w-full mt-4 opacity-50 cursor-not-allowed">
@@ -300,6 +307,30 @@
                             Next →
                         </button>
                     </div>
+                </div>
+            </div>
+
+            <!-- Reset Wallet Modal -->
+            <div id="resetWalletModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
+                <div class="modal-content p-8 max-w-md w-full">
+                    <h2 class="text-2xl font-bold mb-4 text-white">Reset Wallet Balance</h2>
+                    <p class="text-gray mb-4">Enter the new wallet balance for this bot. This will immediately update the paper trading wallet.</p>
+                    <form id="resetWalletForm">
+                        <div class="mb-4">
+                            <label class="block text-white text-sm font-bold mb-2">
+                                New Balance ($)
+                            </label>
+                            <input type="number" id="walletAmount" class="w-full py-2 px-3" step="0.01" min="0" required>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-1">
+                                Update Balance
+                            </button>
+                            <button type="button" id="cancelWalletBtn" class="btn btn-secondary flex-1">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
 
@@ -434,6 +465,9 @@
             document.getElementById('headerTargetUser').textContent = 'Target: ' + (botData.target_user_url || 'N/A').substring(0, 20) + '...';
             document.getElementById('headerStatus').textContent = (botData.status || 'inactive').toUpperCase();
 
+            const wallet = botData.paper_wallet_balance || 0;
+            document.getElementById('headerWalletBalance').textContent = '$' + wallet.toFixed(2);
+
             const pl = botData.total_profit || 0;
             document.getElementById('headerBotPL').textContent = '$' + pl.toFixed(2);
             document.getElementById('headerBotPL').className = 'font-semibold ' + (pl >= 0 ? 'text-green-400' : 'text-red-400');
@@ -442,6 +476,16 @@
 
             const winRate = botData.total_trades > 0 ? ((botData.winning_trades || 0) / botData.total_trades * 100) : 0;
             document.getElementById('headerBotWinRate').textContent = winRate.toFixed(1) + '%';
+
+            // Show/hide reset wallet button based on paper mode
+            const resetWalletBtn = document.getElementById('resetWalletBtn');
+            if (resetWalletBtn) {
+                if (botData.status === 'paper') {
+                    resetWalletBtn.classList.remove('hidden');
+                } else {
+                    resetWalletBtn.classList.add('hidden');
+                }
+            }
         }
 
         // Initialize performance chart
@@ -589,6 +633,63 @@
 
         document.getElementById('cancelParamsBtn').addEventListener('click', () => {
             document.getElementById('editParamsModal').classList.add('hidden');
+        });
+
+        // Reset wallet modal
+        const resetWalletBtn = document.getElementById('resetWalletBtn');
+        if (resetWalletBtn) {
+            resetWalletBtn.addEventListener('click', () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot reset wallet balance.');
+                    return;
+                }
+                // Pre-fill with current balance
+                if (botData) {
+                    document.getElementById('walletAmount').value = (botData.paper_wallet_balance || 0).toFixed(2);
+                }
+                document.getElementById('resetWalletModal').classList.remove('hidden');
+            });
+        }
+
+        document.getElementById('cancelWalletBtn').addEventListener('click', () => {
+            document.getElementById('resetWalletModal').classList.add('hidden');
+        });
+
+        // Reset wallet form
+        document.getElementById('resetWalletForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            if (!isAdmin) {
+                alert('Guest users cannot reset wallet balance.');
+                return;
+            }
+
+            const amount = parseFloat(document.getElementById('walletAmount').value);
+
+            if (amount < 0) {
+                alert('Amount must be non-negative');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/wallet/' + botId + '/reset', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({amount: amount})
+                });
+
+                if (response.ok === true) {
+                    const result = await response.json();
+                    document.getElementById('resetWalletModal').classList.add('hidden');
+                    alert('Wallet balance updated to $' + result.new_balance.toFixed(2));
+                    loadBotData();
+                } else {
+                    const errorData = await response.json();
+                    alert('Failed to update wallet: ' + (errorData.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error updating wallet: ' + error.message);
+            }
         });
 
         // Extract user address from URL or direct input
@@ -896,20 +997,36 @@
             saveSectionStates();
         }
 
-        // Format timestamp
+        // Format timestamp in New York timezone
         function formatTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
+            if (!timestamp) return 'Unknown';
             const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const days = Math.floor(hours / 24);
+            return date.toLocaleString('en-US', {
+                timeZone: 'America/New_York',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }) + ' ET';
+        }
 
-            if (days > 0) return days + 'd ago';
-            if (hours > 0) return hours + 'h ago';
-            const minutes = Math.floor(diff / (1000 * 60));
-            if (minutes > 0) return minutes + 'm ago';
-            return 'Just now';
+        // Calculate duration between two timestamps
+        function calculateDuration(startTime, endTime) {
+            if (!startTime || !endTime) return 'N/A';
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const diffMs = end - start;
+
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m`;
         }
 
         // Render bot trade item
@@ -918,29 +1035,72 @@
             const isProfitable = profitLoss >= 0;
             const colorClass = isProfitable ? 'text-green' : 'text-red';
 
-            return `
-                <div class="bot-list-item">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
-                                    ${trade.is_paper_trade ? 'Paper' : 'Production'}
-                                </span>
-                                ${trade.status === 'open' ? '<span class="badge badge-open">Open</span>' : ''}
-                                ${trade.status === 'closed' ? '<span class="badge badge-closed">Closed</span>' : ''}
+            // Calculate profit/loss percentage
+            const amount = trade.amount || 0;
+            const plPercentage = amount > 0 ? (profitLoss / amount * 100) : 0;
+
+            // Get market name or fall back to outcome description
+            const marketDisplay = trade.market_name || `${trade.outcome || 'Unknown'} market`;
+            const outcomeDisplay = trade.outcome || 'N/A';
+
+            // Format close value
+            const closeValue = trade.close_value || 0;
+
+            // Build display based on trade status
+            if (trade.status === 'closed') {
+                return `
+                    <div class="bot-list-item">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
+                                        ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                    </span>
+                                    <span class="badge badge-closed">Closed</span>
+                                </div>
+                                <p class="text-sm font-medium text-white mb-1">${marketDisplay}</p>
+                                <p class="text-xs text-gray">Outcome: ${outcomeDisplay}</p>
+                                <div class="text-xs text-gray mt-2 space-y-1">
+                                    <p>Opened: ${formatTimestamp(trade.opened_at)}</p>
+                                    <p>Closed: ${formatTimestamp(trade.closed_at)}</p>
+                                    <p>Duration: ${calculateDuration(trade.opened_at, trade.closed_at)}</p>
+                                </div>
                             </div>
-                            <p class="text-sm text-gray mt-1">Market: ${trade.market_id || 'N/A'}</p>
-                            <p class="text-sm text-gray">Outcome: ${trade.outcome || 'N/A'}</p>
-                            <p class="text-xs text-gray mt-1">${formatTimestamp(trade.opened_at)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray">Amount: $${(trade.amount || 0).toFixed(2)}</p>
-                            <p class="text-sm text-gray">Price: ${(trade.price || 0).toFixed(3)}</p>
-                            ${trade.status === 'closed' ? `<p class="text-sm font-semibold ${colorClass}">P/L: $${profitLoss.toFixed(2)}</p>` : ''}
+                            <div class="text-right">
+                                <p class="text-sm text-gray">Bet: $${amount.toFixed(2)}</p>
+                                <p class="text-sm text-gray">Close: $${closeValue.toFixed(2)}</p>
+                                <p class="text-sm font-semibold ${colorClass}">
+                                    ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toFixed(2)}
+                                    (${plPercentage >= 0 ? '+' : ''}${plPercentage.toFixed(1)}%)
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // Open trade
+                return `
+                    <div class="bot-list-item">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
+                                        ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                    </span>
+                                    <span class="badge badge-open">Open</span>
+                                </div>
+                                <p class="text-sm font-medium text-white mb-1">${marketDisplay}</p>
+                                <p class="text-xs text-gray">Outcome: ${outcomeDisplay}</p>
+                                <p class="text-xs text-gray mt-2">Opened: ${formatTimestamp(trade.opened_at)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray">Bet Amount: $${amount.toFixed(2)}</p>
+                                <p class="text-sm text-gray">Entry Price: ${(trade.price || 0).toFixed(3)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // Render target user activity item
@@ -948,7 +1108,13 @@
             const price = activity.price || activity.priceFloat || 0;
             const size = activity.size || activity.outcomeTokensTraded || activity.shares || 0;
             const side = activity.side || activity.tradeType || 'N/A';
-            const market = activity.market_name || activity.market || activity.conditionId || 'Market ID: ' + (activity.asset_id || 'Unknown');
+
+            // Get market name - try multiple fields
+            const market = activity.title || activity.market_name || activity.market || activity.question || `${activity.outcome || 'Unknown'} market`;
+            const outcome = activity.outcome || 'N/A';
+
+            // Calculate total bet amount
+            const betAmount = price * size;
 
             let timeStr = 'Unknown time';
             if (activity.timestamp) {
@@ -960,14 +1126,21 @@
 
             return `
                 <div class="bot-list-item">
-                    <div class="flex justify-between">
-                        <span class="font-semibold text-sm text-white">${market}</span>
-                        <span class="text-xs text-gray">${timeStr}</span>
-                    </div>
-                    <div class="text-sm text-gray mt-1">
-                        <span class="font-medium ${side === 'BUY' || side === 'buy' ? 'text-green' : 'text-red'}">${side}</span>
-                        • Price: $${parseFloat(price).toFixed(4)}
-                        • Size: ${parseFloat(size).toFixed(2)}
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="badge ${side === 'BUY' || side === 'buy' ? 'badge-open' : 'badge-closed'}">
+                                    ${side.toUpperCase()}
+                                </span>
+                            </div>
+                            <p class="text-sm font-medium text-white mb-1">${market}</p>
+                            <p class="text-xs text-gray">Outcome: ${outcome}</p>
+                            <p class="text-xs text-gray mt-2">${timeStr}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-sm text-gray">Amount: $${betAmount.toFixed(2)}</p>
+                            <p class="text-sm text-gray">Price: ${parseFloat(price).toFixed(3)}</p>
+                        </div>
                     </div>
                 </div>
             `;

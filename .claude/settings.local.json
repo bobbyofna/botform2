@@ -30,7 +30,12 @@
       "Bash(venv/bin/python3:*)",
       "Bash(git checkout:*)",
       "Bash(python3:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 install:*)",
+      "Bash(venv/bin/pip3 install:*)",
+      "Bash(source:*)",
+      "Bash(sqlite3:*)"
     ]
   }
 }

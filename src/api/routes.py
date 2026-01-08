@@ -489,7 +489,7 @@ async def get_total_wallet_balance(request: Request):
 
 @router.post("/wallet/{bot_id}/reset")
 async def reset_wallet_balance(request: Request, bot_id: str):
-    """Reset bot's paper trading wallet to initial balance."""
+    """Reset bot's paper trading wallet to initial balance or custom amount."""
     try:
         db_manager = request.app.state.db_manager
 
@@ -498,8 +498,21 @@ async def reset_wallet_balance(request: Request, bot_id: str):
         if bot is None:
             raise HTTPException(status_code=404, detail="Bot not found")
 
+        # Get optional custom amount from request body
+        body = await request.json() if request.headers.get('content-type') == 'application/json' else {}
+        custom_amount = body.get('amount')
+
+        # Validate custom amount if provided
+        if custom_amount is not None:
+            try:
+                custom_amount = float(custom_amount)
+                if custom_amount < 0:
+                    raise HTTPException(status_code=400, detail="Amount must be non-negative")
+            except (ValueError, TypeError):
+                raise HTTPException(status_code=400, detail="Invalid amount format")
+
         # Reset wallet
-        updated_bot = await db_manager.reset_paper_wallet(bot_id)
+        updated_bot = await db_manager.reset_paper_wallet(bot_id, custom_amount)
 
         return {
             "success": True,
@@ -511,6 +524,38 @@ async def reset_wallet_balance(request: Request, bot_id: str):
         raise
     except Exception as e:
         logger.error("Error resetting wallet: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wallet/reset-all-paper")
+async def reset_all_paper_wallets(request: Request):
+    """Reset all active paper trading bots' wallets to $1000."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Get all bots in paper mode
+        all_bots = await db_manager.get_all_bots()
+        paper_bots = [bot for bot in all_bots if bot['status'] == 'paper']
+
+        # Reset each paper bot's wallet to $1000
+        reset_count = 0
+        for bot in paper_bots:
+            await db_manager.reset_paper_wallet(bot['bot_id'], 1000.0)
+            reset_count = reset_count + 1
+
+        logger.info("Reset {} paper trading bot wallets to $1000".format(reset_count))
+
+        return {
+            "success": True,
+            "bots_reset": reset_count,
+            "message": "Reset {} paper trading bot(s) to $1000.00".format(reset_count)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error resetting all paper wallets: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
 
 

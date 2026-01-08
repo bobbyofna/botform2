@@ -68,6 +68,7 @@ class BotManager:
                 _id=bot_id,
                 _name=_bot_data['name'],
                 _target_url=_bot_data['target_user_url'],
+                _target_address=_bot_data.get('target_user_address'),  # Pass pre-extracted address
                 _parameters={
                     'max_trade_value': _bot_data.get('max_trade_value', 500.0),
                     'min_trade_value': _bot_data.get('min_trade_value', 50.0),

@@ -231,6 +231,19 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Admin Commands Section -->
+            {% if is_admin %}
+            <div class="card p-6 border-2 border-blue-600">
+                <h2 class="text-xl font-semibold mb-4 text-white">Admin Commands</h2>
+                <p class="text-sm text-gray mb-4">These commands affect all bots and should be used with caution.</p>
+                <div class="flex gap-4">
+                    <button id="resetAllWalletsBtn" class="btn btn-primary">
+                        Reset All Paper Wallets to $1,000
+                    </button>
+                </div>
+            </div>
+            {% endif %}
         </main>
     </div>
 
@@ -446,17 +459,29 @@
                 } else {
                     botList.innerHTML = bots.map(bot => `
                         <div class="bot-list-item flex justify-between items-center" onclick="window.location.href='/bot/${bot.bot_id}'">
-                            <div>
+                            <div class="flex-1">
                                 <h3 class="font-semibold text-white">${bot.name}</h3>
                                 <div class="flex gap-2 mt-1">
                                     <span class="badge badge-${bot.status}">${bot.status.toUpperCase()}</span>
                                 </div>
                             </div>
-                            <div class="text-right">
-                                <p class="font-semibold ${(bot.total_profit || 0) >= 0 ? 'text-green' : 'text-red'}">
-                                    $${(bot.total_profit || 0).toFixed(2)}
-                                </p>
-                                <p class="text-sm text-gray">${bot.total_trades || 0} trades</p>
+                            <div class="flex gap-8 items-center">
+                                <div class="text-right">
+                                    <p class="text-xs text-gray">Wallet</p>
+                                    <p class="font-semibold text-yellow">
+                                        $${(bot.paper_wallet_balance || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray">P/L</p>
+                                    <p class="font-semibold ${(bot.total_profit || 0) >= 0 ? 'text-green' : 'text-red'}">
+                                        $${(bot.total_profit || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray">Trades</p>
+                                    <p class="text-sm text-white">${bot.total_trades || 0}</p>
+                                </div>
                             </div>
                         </div>
                     `).join('');
@@ -653,20 +678,36 @@
             saveSectionStates();
         }
 
-        // Format timestamp
+        // Format timestamp to exact date/time in New York timezone
         function formatTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
+            if (!timestamp) return 'Unknown';
             const date = new Date(timestamp);
-            const now = new Date();
-            const diff = now - date;
-            const hours = Math.floor(diff / (1000 * 60 * 60));
-            const days = Math.floor(hours / 24);
+            return date.toLocaleString('en-US', {
+                timeZone: 'America/New_York',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }) + ' ET';
+        }
 
-            if (days > 0) return days + 'd ago';
-            if (hours > 0) return hours + 'h ago';
-            const minutes = Math.floor(diff / (1000 * 60));
-            if (minutes > 0) return minutes + 'm ago';
-            return 'Just now';
+        // Calculate duration between two timestamps
+        function calculateDuration(startTime, endTime) {
+            if (!startTime || !endTime) return 'N/A';
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            const diffMs = end - start;
+
+            const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+            if (hours > 0) return `${hours}h ${minutes}m`;
+            return `${minutes}m`;
         }
 
         // Render trade item
@@ -675,30 +716,74 @@
             const isProfitable = profitLoss >= 0;
             const colorClass = isProfitable ? 'text-green' : 'text-red';
 
-            return `
-                <div class="bot-list-item">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="font-semibold text-white">${trade.bot_name || 'Unknown Bot'}</span>
-                                <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
-                                    ${trade.is_paper_trade ? 'Paper' : 'Production'}
-                                </span>
-                                ${trade.status === 'open' ? '<span class="badge badge-open">Open</span>' : ''}
-                                ${trade.status === 'closed' ? '<span class="badge badge-closed">Closed</span>' : ''}
+            // Calculate profit/loss percentage
+            const amount = trade.amount || 0;
+            const plPercentage = amount > 0 ? (profitLoss / amount * 100) : 0;
+
+            // Get market name or fall back to outcome description
+            const marketDisplay = trade.market_name || `${trade.outcome || 'Unknown'} market`;
+            const outcomeDisplay = trade.outcome || 'N/A';
+
+            // Format close value
+            const closeValue = trade.close_value || 0;
+
+            // Build display based on trade status
+            if (trade.status === 'closed') {
+                return `
+                    <div class="bot-list-item">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-semibold text-white">${trade.bot_name || 'Unknown Bot'}</span>
+                                    <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
+                                        ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                    </span>
+                                    <span class="badge badge-closed">Closed</span>
+                                </div>
+                                <p class="text-sm font-medium text-white mb-1">${marketDisplay}</p>
+                                <p class="text-xs text-gray">Outcome: ${outcomeDisplay}</p>
+                                <div class="text-xs text-gray mt-2 space-y-1">
+                                    <p>Opened: ${formatTimestamp(trade.opened_at)}</p>
+                                    <p>Closed: ${formatTimestamp(trade.closed_at)}</p>
+                                    <p>Duration: ${calculateDuration(trade.opened_at, trade.closed_at)}</p>
+                                </div>
                             </div>
-                            <p class="text-sm text-gray mt-1">Market: ${trade.market_id || 'N/A'}</p>
-                            <p class="text-sm text-gray">Outcome: ${trade.outcome || 'N/A'}</p>
-                            <p class="text-xs text-gray mt-1">${formatTimestamp(trade.opened_at)}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-sm text-gray">Amount: $${(trade.amount || 0).toFixed(2)}</p>
-                            <p class="text-sm text-gray">Price: ${(trade.price || 0).toFixed(3)}</p>
-                            ${trade.status === 'closed' ? `<p class="text-sm font-semibold ${colorClass}">P/L: $${profitLoss.toFixed(2)}</p>` : ''}
+                            <div class="text-right">
+                                <p class="text-sm text-gray">Bet: $${amount.toFixed(2)}</p>
+                                <p class="text-sm text-gray">Close: $${closeValue.toFixed(2)}</p>
+                                <p class="text-sm font-semibold ${colorClass}">
+                                    ${profitLoss >= 0 ? '+' : ''}$${profitLoss.toFixed(2)}
+                                    (${plPercentage >= 0 ? '+' : ''}${plPercentage.toFixed(1)}%)
+                                </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                // Open trade
+                return `
+                    <div class="bot-list-item">
+                        <div class="flex justify-between items-start gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="font-semibold text-white">${trade.bot_name || 'Unknown Bot'}</span>
+                                    <span class="badge badge-${trade.is_paper_trade ? 'paper' : 'production'}">
+                                        ${trade.is_paper_trade ? 'Paper' : 'Production'}
+                                    </span>
+                                    <span class="badge badge-open">Open</span>
+                                </div>
+                                <p class="text-sm font-medium text-white mb-1">${marketDisplay}</p>
+                                <p class="text-xs text-gray">Outcome: ${outcomeDisplay}</p>
+                                <p class="text-xs text-gray mt-2">Opened: ${formatTimestamp(trade.opened_at)}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray">Bet Amount: $${amount.toFixed(2)}</p>
+                                <p class="text-sm text-gray">Entry Price: ${(trade.price || 0).toFixed(3)}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         // Render section (preview or full)
@@ -769,6 +854,45 @@
             } catch (error) {
                 console.error('Error loading section data:', error);
             }
+        }
+
+        // Reset all paper wallets button
+        const resetAllWalletsBtn = document.getElementById('resetAllWalletsBtn');
+        if (resetAllWalletsBtn) {
+            resetAllWalletsBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot perform admin commands.');
+                    return;
+                }
+
+                if (confirm('Are you sure you want to reset ALL paper trading bots\' wallets to $1,000?\n\nThis will affect all bots currently in paper mode.') === false) {
+                    return;
+                }
+
+                try {
+                    resetAllWalletsBtn.disabled = true;
+                    resetAllWalletsBtn.textContent = 'Resetting...';
+
+                    const response = await fetch('/api/wallet/reset-all-paper', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+
+                    if (response.ok === true) {
+                        const result = await response.json();
+                        alert(result.message || 'All paper wallets reset successfully');
+                        loadBots(); // Reload bot list to show updated balances
+                    } else {
+                        const errorData = await response.json();
+                        alert('Failed to reset wallets: ' + (errorData.detail || 'Unknown error'));
+                    }
+                } catch (error) {
+                    alert('Error resetting wallets: ' + error.message);
+                } finally {
+                    resetAllWalletsBtn.disabled = false;
+                    resetAllWalletsBtn.textContent = 'Reset All Paper Wallets to $1,000';
+                }
+            });
         }
 
         // Initialize

@@ -87,6 +87,36 @@ async def lifespan(app: FastAPI):
         _db_manager=db_manager
     )
 
+    # Load and start all active bots from database
+    logger.info("Loading active bots from database")
+    try:
+        all_bots = await db_manager.get_all_bots()
+        started_count = 0
+
+        for bot_data in all_bots:
+            bot_id = bot_data['bot_id']
+            status = bot_data['status']
+
+            # Only start bots that were previously running (paper or production mode)
+            if status in ['paper', 'production']:
+                try:
+                    # Create bot instance
+                    bot = await bot_manager.create_bot(bot_data)
+
+                    # Start bot in its previous mode
+                    await bot_manager.start_bot(bot_id, _mode=status)
+                    started_count = started_count + 1
+                    logger.info("Started bot {} in {} mode".format(bot_id, status))
+
+                except Exception as e:
+                    logger.error("Failed to start bot {}: {}".format(bot_id, str(e)))
+
+        logger.info("Loaded {} active bots from database".format(started_count))
+
+    except Exception as e:
+        logger.error("Failed to load bots from database: {}".format(str(e)))
+        logger.warning("Continuing without loading previous bot states")
+
     # Make instances available to routes
     app.state.db_manager = db_manager
     app.state.polymarket_client = polymarket_client

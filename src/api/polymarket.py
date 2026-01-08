@@ -142,19 +142,55 @@ class PolymarketClient:
 
     async def get_market_info(self, _market_id):
         """
-        Get information about a market.
+        Get information about a market from Polymarket.
+        Tries multiple API endpoints to fetch market details.
 
         Args:
-            _market_id: Market identifier
+            _market_id: Market identifier (can be condition_id, token_id, or other market ID format)
 
         Returns:
-            Market information dictionary
+            Market information dictionary with 'question' or 'title' field, or None
         """
-        endpoint = "/markets/{}".format(_market_id)
-
         try:
-            data = await self._request('GET', endpoint)
-            return data
+            async with httpx.AsyncClient(timeout=10.0) as temp_client:
+                # Try Gamma API first (market data endpoint)
+                gamma_url = "{}/markets/{}".format(self._gamma_url, _market_id)
+
+                try:
+                    response = await temp_client.get(gamma_url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data and ('question' in data or 'title' in data):
+                            return data
+                except Exception:
+                    pass
+
+                # Try CLOB API markets endpoint
+                clob_url = "{}/markets/{}".format(self._clob_url, _market_id)
+
+                try:
+                    response = await temp_client.get(clob_url)
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data and ('question' in data or 'title' in data):
+                            return data
+                except Exception:
+                    pass
+
+                # Try searching for the market
+                search_url = "{}/markets".format(self._gamma_url)
+                try:
+                    response = await temp_client.get(search_url, params={'id': _market_id})
+                    if response.status_code == 200:
+                        results = response.json()
+                        if results and len(results) > 0:
+                            return results[0]
+                except Exception:
+                    pass
+
+                self._logger.warning("Could not fetch market info for: {}".format(_market_id))
+                return None
+
         except Exception as e:
             self._logger.error("Failed to get market info: {}".format(str(e)))
             return None

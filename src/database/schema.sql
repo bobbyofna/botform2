@@ -55,10 +55,12 @@ CREATE TABLE IF NOT EXISTS trades (
     -- Trade details
     is_paper_trade BOOLEAN NOT NULL,
     market_id VARCHAR(255),
-    outcome VARCHAR(50),
-    amount DECIMAL(10, 2),
-    price DECIMAL(10, 6),
-    exit_price DECIMAL(10, 6),
+    market_name TEXT,  -- Descriptive name of what the bet was on
+    outcome VARCHAR(255),  -- Outcome name (YES/NO or player name, etc.)
+    amount DECIMAL(10, 2),  -- Initial bet amount
+    price DECIMAL(10, 6),  -- Entry price
+    exit_price DECIMAL(10, 6),  -- Exit price when closed
+    close_value DECIMAL(10, 2),  -- Total value when position was closed
 
     -- Timestamps
     opened_at TIMESTAMP NOT NULL,
