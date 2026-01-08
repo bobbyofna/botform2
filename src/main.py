@@ -14,18 +14,19 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from .config import config
 from .database.manager import DatabaseManager
 from .api.polymarket import PolymarketClient
 from .bots.bot_manager import BotManager
 from .utils.vpn_check import VPNChecker
+from .utils.auth import auth_manager, get_current_user
 from .api import routes
-
-# Fix Windows asyncio event loop for psycopg
-if sys.platform == 'win32':
-    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+from .api import auth_routes
 
 # Configure logging
 logging.basicConfig(
@@ -113,6 +114,9 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown complete")
 
 
+# Create rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create FastAPI app
 app = FastAPI(
     title="BotForm2",
@@ -120,6 +124,10 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# Add rate limiting
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Add CORS middleware for development
 if config.is_development == True:
@@ -130,6 +138,56 @@ if config.is_development == True:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+# Security headers middleware
+@app.middleware("http")
+async def add_security_headers(_request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(_request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+# Authentication middleware
+@app.middleware("http")
+async def auth_middleware(_request: Request, call_next):
+    """Require authentication for protected routes."""
+    # Public routes that don't require authentication
+    public_routes = [
+        "/health",
+        "/api/auth/login",
+        "/api/auth/session",
+        "/login",
+        "/static",
+        "/bg.mp4"
+    ]
+
+    # Check if route is public
+    is_public = False
+    i = 0
+    for route in public_routes:
+        if _request.url.path.startswith(route) == True:
+            is_public = True
+            break
+        i = i + 1
+
+    if is_public == False:
+        # Require authentication
+        session_token = _request.cookies.get('session_token')
+        username = auth_manager.validate_session(session_token)
+
+        if username is None:
+            # Redirect to login for HTML pages
+            if _request.url.path.startswith('/api') == True:
+                raise HTTPException(status_code=401, detail="Not authenticated")
+            else:
+                return RedirectResponse(url="/login", status_code=303)
+
+    return await call_next(_request)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -149,18 +207,69 @@ async def get_background_video():
         logger.error("Background video not found at: {}".format(video_path))
         raise HTTPException(status_code=404, detail="Video not found")
 
+# Login page route
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    """Serve login page."""
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
 # Homepage route
 @app.get("/", response_class=HTMLResponse)
 async def homepage(request: Request):
     """Serve homepage."""
-    return templates.TemplateResponse("index.html", {"request": request})
+    session_token = request.cookies.get('session_token')
+    user_info = auth_manager.get_user_info(session_token)
+    username = user_info.get('username') if user_info is not None else None
+    role = user_info.get('role', 'guest') if user_info is not None else 'guest'
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "username": username,
+        "role": role,
+        "is_admin": True if role == 'admin' else False
+    })
 
 
 # Bot detail page route
 @app.get("/bot/{bot_id}", response_class=HTMLResponse)
 async def bot_detail_page(request: Request, bot_id: str):
     """Serve bot detail page."""
-    return templates.TemplateResponse("bot_detail.html", {"request": request, "bot_id": bot_id})
+    session_token = request.cookies.get('session_token')
+    user_info = auth_manager.get_user_info(session_token)
+    username = user_info.get('username') if user_info is not None else None
+    role = user_info.get('role', 'guest') if user_info is not None else 'guest'
+    return templates.TemplateResponse("bot_detail.html", {
+        "request": request,
+        "bot_id": bot_id,
+        "username": username,
+        "role": role,
+        "is_admin": True if role == 'admin' else False
+    })
+
+
+# Settings page route (admin only)
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    """Serve admin settings page."""
+    session_token = request.cookies.get('session_token')
+    user_info = auth_manager.get_user_info(session_token)
+
+    if user_info is None:
+        return RedirectResponse(url="/login", status_code=303)
+
+    role = user_info.get('role', 'guest')
+
+    # Only admins can access settings
+    if role != 'admin':
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    username = user_info.get('username')
+    return templates.TemplateResponse("settings.html", {
+        "request": request,
+        "username": username,
+        "role": role,
+        "is_admin": True
+    })
 
 
 # Health check endpoint
@@ -175,6 +284,7 @@ async def health_check():
 
 
 # Include API routes (after page routes to avoid conflicts)
+app.include_router(auth_routes.router)
 app.include_router(routes.router)
 
 

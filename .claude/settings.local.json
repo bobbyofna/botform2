@@ -19,7 +19,18 @@
       "Bash(venv\\\\Scripts\\\\python.exe:*)",
       "Bash(.\\\\venv\\\\Scripts\\\\python.exe:*)",
       "Bash(\"C:\\\\Program Files\\\\PostgreSQL\\\\18\\\\bin\\\\psql.exe\" -U botuser22 -d botform22 -c \"SELECT bot_id, name, status FROM bots;\")",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(make start:*)",
+      "Bash(make stop:*)",
+      "Bash(make status:*)",
+      "Bash(make restart:*)",
+      "Bash(sudo make start:*)",
+      "Bash(venv/bin/pip install:*)",
+      "Bash(sudo make restart:*)",
+      "Bash(venv/bin/python3:*)",
+      "Bash(git checkout:*)",
+      "Bash(python3:*)",
+      "Bash(chmod:*)"
     ]
   }
 }

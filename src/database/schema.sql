@@ -1,5 +1,16 @@
 -- BotForm2 Database Schema
 
+-- Users table
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(50) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL,  -- 'admin', 'guest'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Bots table
 CREATE TABLE IF NOT EXISTS bots (
     id SERIAL PRIMARY KEY,
@@ -77,6 +88,8 @@ CREATE TABLE IF NOT EXISTS performance_snapshots (
 );
 
 -- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
 CREATE INDEX IF NOT EXISTS idx_bots_status ON bots(status);
 CREATE INDEX IF NOT EXISTS idx_bots_bot_id ON bots(bot_id);
 CREATE INDEX IF NOT EXISTS idx_trades_bot_id ON trades(bot_id);

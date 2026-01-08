@@ -3,9 +3,12 @@ Database setup script for BotForm2.
 
 Creates PostgreSQL user, database, and tables.
 Run this script once to initialize your database.
+
+Ubuntu/Linux environment version.
 """
 
 import sys
+import os
 import getpass
 import psycopg
 from psycopg import sql
@@ -18,45 +21,98 @@ def print_step(_message):
     print("=" * 60)
 
 
-def get_postgres_admin_password():
-    """Get the PostgreSQL admin password from user."""
-    print("\nTo create a new database user, we need to connect as the")
-    print("PostgreSQL superuser (usually 'postgres').")
-    print("\nIf you don't know the password, check your PostgreSQL")
-    print("installation notes or try leaving it blank.\n")
+def get_admin_credentials():
+    """Get the database admin credentials."""
+    print("\nTo create tables, we need to connect to the PostgreSQL database.")
+    print("\nOptions:")
+    print("1. Use credentials from .env file")
+    print("2. Connect as 'postgres' superuser")
+    print("3. Enter custom credentials\n")
 
-    password = getpass.getpass("Enter postgres superuser password (or press Enter to skip): ")
-    return password if password != '' else None
+    choice = input("Choose option [1]: ").strip() or "1"
+
+    if choice == "1":
+        return None, None  # Will use .env credentials
+    elif choice == "2":
+        password = getpass.getpass("Enter postgres password (or press Enter for peer auth): ")
+        return "postgres", password if password != '' else None
+    else:
+        username = input("Username: ").strip()
+        password = getpass.getpass("Password (or press Enter for peer auth): ")
+        return username, password if password != '' else None
 
 
-def create_database_and_user(_admin_password):
+def create_database_and_user(_admin_username, _admin_password):
     """
-    Create new database user and database.
+    Create new database user and database (or verify they exist).
 
     Args:
+        _admin_username: PostgreSQL admin username (None to use .env)
         _admin_password: PostgreSQL admin password
 
     Returns:
         Tuple of (username, password, database_name) or None if failed
     """
-    print_step("STEP 1: Creating Database User and Database")
+    print_step("STEP 1: Verifying Database User and Database")
 
-    # Get new user details
-    print("\nEnter details for the new database user:")
-    new_username = input("Username [botuser]: ").strip() or "botuser"
-    new_password = getpass.getpass("Password for new user [botpass123]: ").strip() or "botpass123"
-    database_name = input("Database name [botform2]: ").strip() or "botform2"
+    # Get user details from .env file if it exists
+    env_username = None
+    env_password = None
+    env_database = None
+
+    if os.path.exists('.env'):
+        print("\nReading credentials from .env file...")
+        with open('.env', 'r') as f:
+            for line in f:
+                if line.startswith('DATABASE_URL='):
+                    # Parse postgresql://username:password@host:port/database
+                    db_url = line.strip().split('=', 1)[1]
+                    if '://' in db_url:
+                        creds_part = db_url.split('://')[1]
+                        if '@' in creds_part:
+                            user_pass = creds_part.split('@')[0]
+                            if ':' in user_pass:
+                                env_username, env_password = user_pass.split(':', 1)
+                            env_database = creds_part.split('/')[-1]
+
+    # Determine which credentials to use
+    if _admin_username is None:
+        # Use .env credentials
+        if env_username is None or env_password is None or env_database is None:
+            print("\n✗ ERROR: .env file is missing or incomplete DATABASE_URL")
+            print("Please update .env with: DATABASE_URL=postgresql://username:password@localhost:5432/database")
+            return None
+
+        new_username = env_username
+        new_password = env_password
+        database_name = env_database
+        print("\n✓ Using credentials from .env file")
+        print("  Username: {}".format(new_username))
+        print("  Database: {}".format(database_name))
+    else:
+        # Use provided admin credentials to create new user/database
+        print("\nEnter details for the database user:")
+        default_username = env_username if env_username is not None else "botform"
+        default_database = env_database if env_database is not None else "botform2"
+
+        new_username = input("Username [{}]: ".format(default_username)).strip() or default_username
+        new_password = getpass.getpass("Password for user {}: ".format(new_username)).strip()
+        database_name = input("Database name [{}]: ".format(default_database)).strip() or default_database
 
     print("\nAttempting to connect to PostgreSQL...")
 
     # Connection strings to try
     connection_strings = []
 
-    if _admin_password is not None:
-        connection_strings.append("postgresql://postgres:{}@localhost:5432/postgres".format(_admin_password))
-
-    # Try without password (trust authentication)
-    connection_strings.append("postgresql://postgres@localhost:5432/postgres")
+    # If using .env credentials, connect to the target database directly
+    if _admin_username is None:
+        connection_strings.append("postgresql://{}:{}@localhost:5432/{}".format(new_username, new_password, database_name))
+    else:
+        # Connect as admin to postgres database
+        if _admin_password is not None:
+            connection_strings.append("postgresql://{}:{}@localhost:5432/postgres".format(_admin_username, _admin_password))
+        # Try without password (peer/trust authentication)
+        connection_strings.append("postgresql://{}@localhost:5432/postgres".format(_admin_username))
 
     conn = None
     i = 0
@@ -72,7 +128,11 @@ def create_database_and_user(_admin_password):
 
     if conn is None:
         print("\n✗ ERROR: Could not connect to PostgreSQL.")
-        print("Please check your PostgreSQL installation and password.")
+        print("\nTroubleshooting for Ubuntu:")
+        print("1. Make sure PostgreSQL is running: sudo systemctl status postgresql")
+        print("2. Check your password in .env file is correct")
+        print("3. Try running with option 2 as postgres user: sudo -u postgres python3 setup_database.py")
+        print("4. Check pg_hba.conf for authentication settings")
         return None
 
     try:
@@ -80,6 +140,15 @@ def create_database_and_user(_admin_password):
         conn.autocommit = True
         cursor = conn.cursor()
 
+        # If we're using .env credentials, we're already connected to the target database
+        # Just verify and skip user/database creation
+        if _admin_username is None:
+            print("\n✓ Successfully connected to database '{}' as user '{}'".format(database_name, new_username))
+            cursor.close()
+            conn.close()
+            return (new_username, new_password, database_name)
+
+        # Otherwise, create user and database if needed
         # Check if user exists
         print("\nChecking if user '{}' exists...".format(new_username))
         cursor.execute(
@@ -273,18 +342,18 @@ def main():
         print("\nSetup cancelled.")
         return
 
-    # Get admin password
-    admin_password = get_postgres_admin_password()
+    # Get admin credentials
+    admin_username, admin_password = get_admin_credentials()
 
-    # Create user and database
-    result = create_database_and_user(admin_password)
+    # Create user and database (or verify they exist)
+    result = create_database_and_user(admin_username, admin_password)
 
     if result is None:
         print("\n✗ Database setup failed!")
-        print("\nTroubleshooting:")
-        print("1. Make sure PostgreSQL is running")
-        print("2. Check your postgres superuser password")
-        print("3. Try running: sc query postgresql-x64-18")
+        print("\nTroubleshooting for Ubuntu:")
+        print("1. Make sure PostgreSQL is running: sudo systemctl status postgresql")
+        print("2. Try running as postgres user: sudo -u postgres python3 setup_database.py")
+        print("3. Check authentication settings in /etc/postgresql/*/main/pg_hba.conf")
         return
 
     username, password, database = result
@@ -303,11 +372,15 @@ def main():
     print("✓ Database Setup Complete!")
     print("=" * 60)
     print("\nNext steps:")
-    print("1. Update your .env file with the DATABASE_URL above")
-    print("2. Restart your BotForm2 server")
-    print("3. The application will now connect to the database successfully")
+    print("1. Update your .env file with the DATABASE_URL above (if not already done)")
+    print("2. Save the database password to .pgpass for seamless CLI access:")
+    print("   Run this command (copy-paste the entire line):")
+    print("   echo 'localhost:5432:{}:{}:{}' >> ~/.pgpass && chmod 600 ~/.pgpass".format(database, username, password))
+    print("\n   Note: The single quotes prevent shell interpretation of special characters")
+    print("3. Restart your BotForm2 server")
+    print("4. The application will now connect to the database successfully")
     print("\nTo restart the server:")
-    print("  python run.py")
+    print("  python3 run.py")
 
 
 if __name__ == "__main__":

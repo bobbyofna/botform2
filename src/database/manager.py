@@ -621,3 +621,141 @@ class DatabaseManager:
         result = await self.fetch(query, {'bot_id': _bot_id})
         self._logger.info("Reset paper wallet for bot: {}".format(_bot_id))
         return result
+
+    # User management methods
+    async def get_all_users(self):
+        """
+        Get all users.
+
+        Returns:
+            List of user records
+        """
+        query = """
+            SELECT user_id, username, role, created_at, updated_at
+            FROM users
+            ORDER BY created_at DESC
+        """
+        result = await self.fetch_all(query)
+        return result if result is not None else []
+
+    async def get_user_by_username(self, _username):
+        """
+        Get user by username.
+
+        Args:
+            _username: Username to search for
+
+        Returns:
+            User record or None
+        """
+        query = """
+            SELECT user_id, username, password_hash, role, created_at, updated_at
+            FROM users
+            WHERE username = %(username)s
+        """
+        return await self.fetch(query, {'username': _username})
+
+    async def get_user_by_id(self, _user_id):
+        """
+        Get user by ID.
+
+        Args:
+            _user_id: User ID to search for
+
+        Returns:
+            User record or None
+        """
+        query = """
+            SELECT user_id, username, password_hash, role, created_at, updated_at
+            FROM users
+            WHERE user_id = %(user_id)s
+        """
+        return await self.fetch(query, {'user_id': _user_id})
+
+    async def create_user(self, _username, _password, _role):
+        """
+        Create a new user.
+
+        Args:
+            _username: Username
+            _password: Plain text password (will be hashed)
+            _role: User role ('admin' or 'guest')
+
+        Returns:
+            Created user record
+        """
+        from ..utils.auth import auth_manager
+        from ..utils.id_generator import id_generator
+
+        # Hash password
+        password_hash = auth_manager.hash_password(_password)
+
+        # Generate user ID
+        user_id = id_generator.generate_id('user')
+
+        query = """
+            INSERT INTO users (user_id, username, password_hash, role)
+            VALUES (%(user_id)s, %(username)s, %(password_hash)s, %(role)s)
+            RETURNING user_id, username, role, created_at, updated_at
+        """
+        result = await self.fetch(query, {
+            'user_id': user_id,
+            'username': _username,
+            'password_hash': password_hash,
+            'role': _role
+        })
+        self._logger.info("Created user: {}".format(_username))
+        return result
+
+    async def update_user(self, _user_id, _update_dict):
+        """
+        Update user information.
+
+        Args:
+            _user_id: User ID to update
+            _update_dict: Dictionary of fields to update
+
+        Returns:
+            Updated user record or None
+        """
+        if len(_update_dict) == 0:
+            return None
+
+        # Build SET clause
+        set_clauses = []
+        params = {'user_id': _user_id}
+
+        for key, value in _update_dict.items():
+            set_clauses.append("{} = %({})s".format(key, key))
+            params[key] = value
+
+        set_clauses.append("updated_at = CURRENT_TIMESTAMP")
+
+        query = """
+            UPDATE users
+            SET {}
+            WHERE user_id = %(user_id)s
+            RETURNING user_id, username, role, created_at, updated_at
+        """.format(', '.join(set_clauses))
+
+        result = await self.fetch(query, params)
+        self._logger.info("Updated user: {}".format(_user_id))
+        return result
+
+    async def delete_user(self, _user_id):
+        """
+        Delete a user.
+
+        Args:
+            _user_id: User ID to delete
+
+        Returns:
+            Number of deleted rows
+        """
+        query = """
+            DELETE FROM users
+            WHERE user_id = %(user_id)s
+        """
+        await self.execute(query, {'user_id': _user_id})
+        self._logger.info("Deleted user: {}".format(_user_id))
+        return 1

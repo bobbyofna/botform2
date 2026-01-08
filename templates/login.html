@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - BotForm2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jura', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-900 text-white">
+    <div class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full">
+            <div class="bg-gray-800 rounded-lg shadow-xl p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-blue-400">BotForm2</h1>
+                    <p class="text-gray-400 mt-2">Multi-Bot Copy Trading Platform</p>
+                </div>
+
+                <form id="loginForm" class="space-y-6">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-300 mb-2">
+                            Username
+                        </label>
+                        <input
+                            type="text"
+                            id="username"
+                            name="username"
+                            required
+                            autocomplete="username"
+                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-white"
+                            placeholder="Enter your username"
+                        >
+                    </div>
+
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-300 mb-2">
+                            Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            name="password"
+                            required
+                            autocomplete="current-password"
+                            class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:border-blue-500 text-white"
+                            placeholder="Enter your password"
+                        >
+                    </div>
+
+                    <div id="errorMessage" class="hidden">
+                        <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-lg">
+                            <span class="block sm:inline" id="errorText"></span>
+                        </div>
+                    </div>
+
+                    <div id="lockoutMessage" class="hidden">
+                        <div class="bg-yellow-900 border border-yellow-700 text-yellow-200 px-4 py-3 rounded-lg">
+                            <span class="block sm:inline">Too many failed attempts. Please wait <span id="lockoutTime"></span> before trying again.</span>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        id="loginButton"
+                        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    >
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center text-sm text-gray-400">
+                    <p>Secure trading platform with authentication</p>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center text-xs text-gray-500">
+                <p>BotForm2 v1.0.0 - Protected by rate limiting and brute force protection</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.getElementById('loginForm');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
+        const lockoutMessage = document.getElementById('lockoutMessage');
+        const lockoutTime = document.getElementById('lockoutTime');
+        const loginButton = document.getElementById('loginButton');
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Hide previous messages
+            errorMessage.classList.add('hidden');
+            lockoutMessage.classList.add('hidden');
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // Disable button during request
+            loginButton.disabled = true;
+            loginButton.textContent = 'Signing in...';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success - redirect to dashboard
+                    window.location.href = '/';
+                } else {
+                    // Handle errors
+                    if (data.lockout_until) {
+                        // User is locked out
+                        lockoutTime.textContent = formatLockoutTime(data.lockout_until);
+                        lockoutMessage.classList.remove('hidden');
+                    } else {
+                        // Show error message
+                        errorText.textContent = data.detail || 'Invalid credentials';
+                        errorMessage.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                errorText.textContent = 'Network error. Please try again.';
+                errorMessage.classList.remove('hidden');
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = 'Sign In';
+            }
+        });
+
+        function formatLockoutTime(isoString) {
+            const lockoutDate = new Date(isoString);
+            const now = new Date();
+            const diffMs = lockoutDate - now;
+            const diffMins = Math.ceil(diffMs / 60000);
+
+            if (diffMins > 1) {
+                return diffMins + ' minutes';
+            } else {
+                return '1 minute';
+            }
+        }
+    </script>
+</body>
+</html>

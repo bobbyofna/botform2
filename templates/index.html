@@ -4,11 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BotForm2 - Polymarket Copy Trading Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jura', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+    <!-- Sticky Header -->
+    <nav class="sticky top-0 z-50 bg-black bg-opacity-70 backdrop-blur-sm border-b border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Left: Logo/Title -->
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-white">BotForm2</h1>
+                </div>
+
+                <!-- Center: Dashboard Stats -->
+                <div class="hidden md:flex items-center space-x-6 text-sm">
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Total P/L</div>
+                        <div id="headerPL" class="font-semibold text-green-400">$0.00</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Win Rate</div>
+                        <div id="headerWinRate" class="font-semibold text-white">0%</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Wallet Balance</div>
+                        <div id="headerWallet" class="font-semibold text-yellow-400">$0.00</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Active Bots</div>
+                        <div id="headerActiveBots" class="font-semibold text-blue-400">0</div>
+                    </div>
+                </div>
+
+                <!-- Right: User Menu -->
+                <div class="flex items-center space-x-4">
+                    <button id="hamburgerBtn" class="text-white hover:text-blue-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hamburger Menu (Hidden by default) -->
+    <div id="hamburgerMenu" class="hidden fixed top-16 right-0 z-40 w-64 bg-black bg-opacity-90 border-l border-gray-800 shadow-xl">
+        <div class="p-4 space-y-2">
+            <a href="/" class="block px-4 py-2 text-white hover:bg-gray-700 rounded">Dashboard</a>
+            {% if is_admin %}
+            <a href="/settings" class="block px-4 py-2 text-white hover:bg-gray-700 rounded">Settings</a>
+            {% endif %}
+            <button onclick="logout()" class="block w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 rounded">Logout</button>
+        </div>
+    </div>
+
     <!-- Video Background -->
     <div class="video-background">
         <video autoplay loop muted playsinline id="bgVideo">
@@ -19,15 +85,6 @@
     <!-- Page Container -->
     <div class="page-container">
     <div class="container mx-auto px-4 py-8">
-        <header class="mb-8">
-            <div class="flex justify-between items-center">
-                <h1 class="text-4xl font-bold text-white">BotForm2 Dashboard</h1>
-                <button id="newBotBtn" class="btn btn-primary">
-                    + New Bot
-                </button>
-            </div>
-        </header>
-
         <main>
             <!-- Performance Metrics Summary -->
             <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -68,8 +125,13 @@
             <!-- Bot List -->
             <div class="card p-6 mb-8">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-white">Your Bots</h2>
+                    <h2 class="text-xl font-semibold text-white">All Bots</h2>
                     <div class="flex gap-4">
+                        {% if is_admin %}
+                        <button id="newBotBtn" class="btn btn-primary">
+                            + New Bot
+                        </button>
+                        {% endif %}
                         <select id="filterStatus" class="border rounded px-3 py-1">
                             <option value="">All Status</option>
                             <option value="inactive">Inactive</option>
@@ -267,6 +329,45 @@
             }
         });
 
+        // Admin status from Jinja template
+        const isAdmin = {{ is_admin|tojson }};
+
+        // Hamburger menu toggle
+        document.getElementById('hamburgerBtn').addEventListener('click', () => {
+            const menu = document.getElementById('hamburgerMenu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('hamburgerMenu');
+            const btn = document.getElementById('hamburgerBtn');
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .then(() => window.location.href = '/login');
+        }
+
+        // Update header stats
+        function updateHeaderStats() {
+            const totalPL = document.getElementById('totalPL').textContent;
+            const winRate = document.getElementById('winRate').textContent;
+            const wallet = document.getElementById('walletBalance').textContent;
+            const activeBots = document.getElementById('activeBots').textContent;
+
+            document.getElementById('headerPL').textContent = totalPL;
+            document.getElementById('headerPL').className = 'font-semibold ' +
+                (parseFloat(totalPL.replace('$', '').replace(',', '')) >= 0 ? 'text-green-400' : 'text-red-400');
+            document.getElementById('headerWinRate').textContent = winRate;
+            document.getElementById('headerWallet').textContent = wallet;
+            document.getElementById('headerActiveBots').textContent = activeBots;
+        }
+
         // Initialize charts
         const paperCtx = document.getElementById('paperChart').getContext('2d');
         const productionCtx = document.getElementById('productionChart').getContext('2d');
@@ -335,6 +436,9 @@
                 const activeBots = bots.filter(b => b.status !== 'inactive');
                 document.getElementById('activeBots').textContent = activeBots.length;
 
+                // Update header stats
+                updateHeaderStats();
+
                 // Update bot list
                 const botList = document.getElementById('botList');
                 if (bots.length === 0) {
@@ -363,9 +467,16 @@
         }
 
         // Modal controls
-        document.getElementById('newBotBtn').addEventListener('click', () => {
-            document.getElementById('createBotModal').classList.remove('hidden');
-        });
+        const newBotBtn = document.getElementById('newBotBtn');
+        if (newBotBtn) {
+            newBotBtn.addEventListener('click', () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot create bots. Please log in as admin.');
+                    return;
+                }
+                document.getElementById('createBotModal').classList.remove('hidden');
+            });
+        }
 
         document.getElementById('cancelBtn').addEventListener('click', () => {
             document.getElementById('createBotModal').classList.add('hidden');
@@ -374,6 +485,11 @@
         // Create bot form
         document.getElementById('createBotForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (!isAdmin) {
+                alert('Guest users cannot create bots. Please log in as admin.');
+                return;
+            }
 
             const createBtn = document.getElementById('createBotBtn');
             const validationMsg = document.getElementById('validationMessage');

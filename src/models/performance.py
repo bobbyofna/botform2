@@ -26,7 +26,7 @@ class PerformanceSnapshot:
         self._bot_id = _bot_id
         self._total_profit = _total_profit
         self._total_trades = _total_trades
-        _win_rate = _win_rate
+        self._win_rate = _win_rate
         self._snapshot_type = _snapshot_type
         self._timestamp = None
         self._id = None

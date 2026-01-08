@@ -1,40 +1,76 @@
 # BotForm2 Server Management Makefile
+# Ubuntu/Linux version
 # Provides easy commands for managing the server process
 
-PYTHON = venv/Scripts/pythonw.exe
-PORT = 8000
-PG_SERVICE = postgresql-x64-18
+PYTHON = venv/bin/python3
+PORT = 80
+PG_SERVICE = postgresql
 
-.PHONY: stop start restart reboot status
+.PHONY: stop start restart reboot status logs
 
 stop:
-	@for /f "tokens=5" %%a in ('netstat -aon ^| find "8000" ^| find "LISTENING"') do @taskkill /f /pid %%a 2>nul
+	@echo "Stopping BotForm2 server..."
+	@if lsof -ti:$(PORT) > /dev/null 2>&1; then \
+		kill -TERM $$(lsof -ti:$(PORT)) 2>/dev/null && echo "✓ Server stopped" || echo "✗ Failed to stop server"; \
+	else \
+		echo "Server is not running on port $(PORT)"; \
+	fi
 
 start:
-	start /B $(PYTHON) run.py > server.log 2>&1
+	@echo "Starting BotForm2 server..."
+	@if lsof -ti:$(PORT) > /dev/null 2>&1; then \
+		echo "✗ Server already running on port $(PORT)"; \
+		echo "  Use 'make stop' first or 'make restart' to restart"; \
+		exit 1; \
+	else \
+		nohup $(PYTHON) run.py > server.log 2>&1 & \
+		echo "✓ Server starting in background..."; \
+		sleep 2; \
+		if lsof -ti:$(PORT) > /dev/null 2>&1; then \
+			echo "✓ Server is running on port $(PORT)"; \
+			echo "  PID: $$(lsof -ti:$(PORT))"; \
+		else \
+			echo "✗ Server failed to start. Check server.log for details"; \
+			tail -20 server.log; \
+			exit 1; \
+		fi \
+	fi
 
 restart:
-	@for /f "tokens=5" %a in ('netstat -aon | find "8000" ^| find "LISTENING"') do taskkill /f /pid %a
-	start /B $(PYTHON) run.py > server.log 2>&1
+	@echo "Restarting BotForm2 server..."
+	@$(MAKE) stop
+	@sleep 1
+	@$(MAKE) start
 
 reboot:
-	@net stop postgresql-x64-18
-	@net start postgresql-x64-18
-	@for /f "tokens=5" %%a in ('netstat -aon ^| find "8000" ^| find "LISTENING"') do @taskkill /f /pid %%a 2>nul
-	start /B $(PYTHON) run.py > server.log 2>&1
+	@echo "Rebooting PostgreSQL and BotForm2..."
+	@sudo systemctl restart $(PG_SERVICE)
+	@echo "✓ PostgreSQL restarted"
+	@$(MAKE) restart
 
 status:
-	@echo BotForm2 Status Check
-	@echo =====================
-	@echo.
-	@echo PostgreSQL Service:
-	@sc query $(PG_SERVICE) | findstr STATE
-	@echo.
-	@echo Port $(PORT) Status:
-	@netstat -ano | findstr :$(PORT) | findstr LISTENING >nul 2>&1 && echo Server is RUNNING on port $(PORT) || echo Port $(PORT) is AVAILABLE
-	@echo.
-	@echo Server Health:
-	@curl -s http://127.0.0.1:$(PORT)/health 2>nul || echo Server not responding
-	@echo.
-	@echo Active Bots:
-	@curl -s http://127.0.0.1:$(PORT)/api/bots 2>nul | findstr "bot_id" || echo No bots or server not running
+	@echo "========================================"
+	@echo "BotForm2 Status Check"
+	@echo "========================================"
+	@echo ""
+	@echo "PostgreSQL Service:"
+	@systemctl is-active --quiet $(PG_SERVICE) && echo "  ✓ Running" || echo "  ✗ Stopped"
+	@echo ""
+	@echo "Port $(PORT) Status:"
+	@if lsof -ti:$(PORT) > /dev/null 2>&1; then \
+		echo "  ✓ Server is RUNNING on port $(PORT)"; \
+		echo "  PID: $$(lsof -ti:$(PORT))"; \
+	else \
+		echo "  ✗ Port $(PORT) is AVAILABLE (server not running)"; \
+	fi
+	@echo ""
+	@echo "Server Health:"
+	@curl -s http://localhost:$(PORT)/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "  ✗ Server not responding"
+	@echo ""
+	@echo "Active Bots:"
+	@curl -s http://localhost:$(PORT)/api/bots 2>/dev/null | python3 -m json.tool 2>/dev/null | head -20 || echo "  ✗ Cannot retrieve bot status"
+	@echo ""
+
+logs:
+	@echo "Tailing server logs (Ctrl+C to exit)..."
+	@tail -f server.log

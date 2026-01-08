@@ -70,10 +70,10 @@ class CopyBot(BaseBot):
         Returns:
             Ethereum address
         """
-        # Extract address from URL like https://polymarket.com/user/0x1234...
-        match = re.search(r'/user/(0x[a-fA-F0-9]+)', _url)
+        # Extract address from URL like https://polymarket.com/user/0x1234... or /profile/0x1234...
+        match = re.search(r'/(user|profile)/(0x[a-fA-F0-9]+)', _url)
         if match is not None:
-            return match.group(1)
+            return match.group(2)
         else:
             return None
 
@@ -98,7 +98,7 @@ class CopyBot(BaseBot):
             return
 
         try:
-            activities = await self._polymarket_client.get_user_activity(
+            activities = await self._polymarket_client.get_user_recent_activity(
                 _user_address=self._target_address,
                 _limit=10
             )
@@ -106,8 +106,8 @@ class CopyBot(BaseBot):
             # Process each activity
             i = 0
             for activity in activities:
-                # Simplified: just log for now
-                self._logger.debug("Activity {}: {}".format(i, activity))
+                # Log trade activity
+                self._logger.info("Trade activity {}: {}".format(i, activity))
                 i = i + 1
 
         except Exception as e:

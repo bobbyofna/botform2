@@ -13,12 +13,14 @@ BotForm2 is a multi-bot copy trading platform for Polymarket that provides both 
 ## Technology Stack
 
 ### Backend
-- **Language**: Python
+- **Platform**: Ubuntu Linux (AWS EC2)
+- **Language**: Python 3.12+
 - **Web Framework**: FastAPI
-- **Database**: PostgreSQL with asyncpg
+- **Database**: PostgreSQL with psycopg (async driver)
 - **Async Runtime**: asyncio
 - **API Client**: httpx (async HTTP client for Polymarket API)
 - **Environment**: python-dotenv for configuration
+- **Process Management**: nohup with Makefile commands
 
 ### Frontend
 - **Framework**: Modern vanilla JavaScript with Fetch API
@@ -27,9 +29,11 @@ BotForm2 is a multi-bot copy trading platform for Polymarket that provides both 
 - **UI Components**: Custom components with responsive design
 
 ### Security & Infrastructure
-- **VPN Check**: Mandatory VPN validation on startup
+- **Host**: Binds to 0.0.0.0 for public access
+- **VPN Check**: Optional VPN validation on startup (configurable)
 - **API Rate Limiting**: Respect Polymarket API limits
-- **Environment Variables**: Secure credential management
+- **Environment Variables**: Secure credential management via .env
+- **Server Management**: Makefile commands (start, stop, restart, status, logs)
 
 ## System Architecture
 
@@ -669,6 +673,61 @@ class CopyBot:
 - Clear visual feedback for all actions
 - Graceful error handling with helpful messages
 - Mobile-responsive design
+
+## Server Management
+
+### Makefile Commands
+
+The server is managed using simple Makefile commands:
+
+**Start server:**
+```bash
+make start
+```
+Starts the server in the background using nohup. Validates that the server started successfully.
+
+**Stop server:**
+```bash
+make stop
+```
+Gracefully stops the running server by sending TERM signal to the process.
+
+**Restart server:**
+```bash
+make restart
+```
+Stops the server (if running) and starts it again. Useful after code changes.
+
+**Check status:**
+```bash
+make status
+```
+Shows comprehensive status including:
+- PostgreSQL service status
+- Server running status and PID
+- Health check endpoint response
+- Active bots list
+
+**View logs:**
+```bash
+make logs
+```
+Tail the server.log file in real-time (Ctrl+C to exit).
+
+**Reboot everything:**
+```bash
+make reboot
+```
+Restarts PostgreSQL service and the BotForm2 server.
+
+### Deployment Notes
+
+- Server binds to `0.0.0.0` to accept connections from public IP
+- Configure `HOST` in `.env` file (default: 0.0.0.0)
+- Server runs on port 8000 (configurable via `PORT` in `.env`)
+- Logs are written to `server.log` in the project root
+- Process runs in background using nohup
+- Database credentials stored in `.env` and `~/.pgpass`
 
 ## Future Enhancements (Post-MVP)
 - Additional bot types (momentum, arbitrage, etc.)

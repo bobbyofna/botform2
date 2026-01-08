@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Settings - BotForm2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jura', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <!-- Sticky Header -->
+    <nav class="sticky top-0 z-50 bg-black bg-opacity-70 backdrop-blur-sm border-b border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Left: Logo/Title -->
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-white">BotForm2 - Admin Settings</h1>
+                </div>
+
+                <!-- Right: User Menu -->
+                <div class="flex items-center space-x-4">
+                    <button id="hamburgerBtn" class="text-white hover:text-blue-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hamburger Menu -->
+    <div id="hamburgerMenu" class="hidden fixed top-16 right-0 z-40 w-64 bg-black bg-opacity-90 border-l border-gray-800 shadow-xl">
+        <div class="p-4 space-y-2">
+            <a href="/" class="block px-4 py-2 text-white hover:bg-gray-700 rounded">Dashboard</a>
+            <a href="/settings" class="block px-4 py-2 text-blue-400 hover:bg-gray-700 rounded">Settings</a>
+            <button onclick="logout()" class="block w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 rounded">Logout</button>
+        </div>
+    </div>
+
+    <!-- Video Background -->
+    <div class="video-background">
+        <video autoplay loop muted playsinline id="bgVideo">
+            <source src="/bg.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- Page Container -->
+    <div class="page-container">
+        <div class="container mx-auto px-4 py-8">
+            <main>
+                <!-- Page Header -->
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-white mb-2">Admin Settings</h2>
+                    <p class="text-gray-400">Manage user accounts and system configuration</p>
+                </div>
+
+                <!-- User Management Section -->
+                <div class="card p-6 mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-semibold text-white">User Management</h3>
+                        <button id="addUserBtn" class="btn btn-primary">
+                            + Add User
+                        </button>
+                    </div>
+
+                    <!-- Users Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left py-3 px-4 text-gray-400 font-medium">Username</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 font-medium">Role</th>
+                                    <th class="text-left py-3 px-4 text-gray-400 font-medium">Created</th>
+                                    <th class="text-right py-3 px-4 text-gray-400 font-medium">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center py-8 text-gray-400">Loading users...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Add/Edit User Modal -->
+    <div id="userModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
+        <div class="modal-content p-8 max-w-md w-full">
+            <h2 id="modalTitle" class="text-2xl font-bold mb-4 text-white">Add User</h2>
+            <form id="userForm">
+                <div class="mb-4">
+                    <label class="block text-white text-sm font-bold mb-2">
+                        Username
+                    </label>
+                    <input type="text" id="username" class="w-full py-2 px-3 bg-gray-700 border border-gray-600 rounded text-white" required>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-white text-sm font-bold mb-2">
+                        Password
+                    </label>
+                    <input type="password" id="password" class="w-full py-2 px-3 bg-gray-700 border border-gray-600 rounded text-white" required>
+                    <p class="text-xs text-gray-400 mt-1">Leave blank to keep existing password (edit mode)</p>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-white text-sm font-bold mb-2">
+                        Role
+                    </label>
+                    <select id="role" class="w-full py-2 px-3 bg-gray-700 border border-gray-600 rounded text-white" required>
+                        <option value="guest">Guest (Read-only)</option>
+                        <option value="admin">Admin (Full access)</option>
+                    </select>
+                </div>
+
+                <div id="errorMessage" class="hidden mb-4">
+                    <div class="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded">
+                        <span id="errorText"></span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" id="saveUserBtn" class="btn btn-primary flex-1">
+                        Save
+                    </button>
+                    <button type="button" id="cancelUserBtn" class="btn btn-secondary flex-1">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 modal-backdrop flex items-center justify-center z-50">
+        <div class="modal-content p-8 max-w-md w-full">
+            <h2 class="text-2xl font-bold mb-4 text-white">Confirm Delete</h2>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete user <span id="deleteUsername" class="font-semibold text-white"></span>?</p>
+            <p class="text-sm text-red-400 mb-6">This action cannot be undone.</p>
+
+            <div class="flex gap-2">
+                <button id="confirmDeleteBtn" class="btn bg-red-600 hover:bg-red-700 text-white flex-1">
+                    Delete
+                </button>
+                <button id="cancelDeleteBtn" class="btn btn-secondary flex-1">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Hamburger menu toggle
+        document.getElementById('hamburgerBtn').addEventListener('click', () => {
+            const menu = document.getElementById('hamburgerMenu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('hamburgerMenu');
+            const btn = document.getElementById('hamburgerBtn');
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .then(() => window.location.href = '/login');
+        }
+
+        // State
+        let users = [];
+        let editingUserId = null;
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/users');
+                const data = await response.json();
+                users = data.users || [];
+                renderUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                document.getElementById('usersTableBody').innerHTML =
+                    '<tr><td colspan="4" class="text-center py-8 text-red-400">Error loading users</td></tr>';
+            }
+        }
+
+        // Render users table
+        function renderUsers() {
+            const tbody = document.getElementById('usersTableBody');
+
+            if (users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No users found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = users.map(user => `
+                <tr class="border-b border-gray-800 hover:bg-gray-800">
+                    <td class="py-3 px-4 text-white">${user.username}</td>
+                    <td class="py-3 px-4">
+                        <span class="badge badge-${user.role === 'admin' ? 'production' : 'paper'}">
+                            ${user.role.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-gray-400">${formatDate(user.created_at)}</td>
+                    <td class="py-3 px-4 text-right">
+                        <button onclick="editUser('${user.user_id}')" class="text-blue-400 hover:text-blue-300 mr-3">
+                            Change Password
+                        </button>
+                        ${user.username !== 'admin' ? `
+                            <button onclick="deleteUser('${user.user_id}', '${user.username}')" class="text-red-400 hover:text-red-300">
+                                Delete
+                            </button>
+                        ` : '<span class="text-gray-600">Protected</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        // Add user button
+        document.getElementById('addUserBtn').addEventListener('click', () => {
+            editingUserId = null;
+            document.getElementById('modalTitle').textContent = 'Add User';
+            document.getElementById('userForm').reset();
+            document.getElementById('username').disabled = false;
+            document.getElementById('password').required = true;
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('userModal').classList.remove('hidden');
+        });
+
+        // Cancel user modal
+        document.getElementById('cancelUserBtn').addEventListener('click', () => {
+            document.getElementById('userModal').classList.add('hidden');
+        });
+
+        // Edit user
+        window.editUser = function(userId) {
+            const user = users.find(u => u.user_id === userId);
+            if (!user) return;
+
+            editingUserId = userId;
+            document.getElementById('modalTitle').textContent = 'Change Password for ' + user.username;
+            document.getElementById('username').value = user.username;
+            document.getElementById('username').disabled = true;
+            document.getElementById('password').value = '';
+            document.getElementById('password').required = false;
+            document.getElementById('role').value = user.role;
+            document.getElementById('errorMessage').classList.add('hidden');
+            document.getElementById('userModal').classList.remove('hidden');
+        };
+
+        // Save user form
+        document.getElementById('userForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+
+            const errorMessage = document.getElementById('errorMessage');
+            const errorText = document.getElementById('errorText');
+            const saveBtn = document.getElementById('saveUserBtn');
+
+            // Hide previous errors
+            errorMessage.classList.add('hidden');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
+                const method = editingUserId ? 'PUT' : 'POST';
+
+                const body = { username, role };
+                if (password) {
+                    body.password = password;
+                }
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('userModal').classList.add('hidden');
+                    await loadUsers();
+                } else {
+                    errorText.textContent = data.detail || 'Failed to save user';
+                    errorMessage.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error saving user:', error);
+                errorText.textContent = 'Network error: ' + error.message;
+                errorMessage.classList.remove('hidden');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        });
+
+        // Delete user
+        let deletingUserId = null;
+        window.deleteUser = function(userId, username) {
+            deletingUserId = userId;
+            document.getElementById('deleteUsername').textContent = username;
+            document.getElementById('deleteModal').classList.remove('hidden');
+        };
+
+        // Cancel delete
+        document.getElementById('cancelDeleteBtn').addEventListener('click', () => {
+            document.getElementById('deleteModal').classList.add('hidden');
+            deletingUserId = null;
+        });
+
+        // Confirm delete
+        document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+            if (!deletingUserId) return;
+
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Deleting...';
+
+            try {
+                const response = await fetch(`/api/users/${deletingUserId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    document.getElementById('deleteModal').classList.add('hidden');
+                    await loadUsers();
+                } else {
+                    const data = await response.json();
+                    alert('Failed to delete user: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('Network error: ' + error.message);
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Delete';
+                deletingUserId = null;
+            }
+        });
+
+        // Load users on page load
+        loadUsers();
+    </script>
+</body>
+</html>

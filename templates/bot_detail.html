@@ -4,11 +4,85 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bot Detail - BotForm2</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'sans': ['Jura', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+    <!-- Sticky Header -->
+    <nav class="sticky top-0 z-50 bg-black bg-opacity-70 backdrop-blur-sm border-b border-gray-800">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <!-- Left: Back button and Bot Name -->
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-blue-400 hover:text-blue-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                        </svg>
+                    </a>
+                    <div>
+                        <h1 id="headerBotName" class="text-lg font-semibold text-white">Loading...</h1>
+                        <p id="headerTargetUser" class="text-xs text-gray-400">Target: ...</p>
+                    </div>
+                </div>
+
+                <!-- Center: Bot Stats -->
+                <div class="hidden md:flex items-center space-x-6 text-sm">
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Status</div>
+                        <div id="headerStatus" class="font-semibold text-white">Inactive</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Total P/L</div>
+                        <div id="headerBotPL" class="font-semibold text-green-400">$0.00</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Total Trades</div>
+                        <div id="headerTotalTrades" class="font-semibold text-blue-400">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-gray-400 text-xs">Win Rate</div>
+                        <div id="headerBotWinRate" class="font-semibold text-purple-400">0%</div>
+                    </div>
+                </div>
+
+                <!-- Right: User Menu -->
+                <div class="flex items-center space-x-4">
+                    <button id="hamburgerBtn" class="text-white hover:text-blue-400">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hamburger Menu (Hidden by default) -->
+    <div id="hamburgerMenu" class="hidden fixed top-16 right-0 z-40 w-64 bg-black bg-opacity-90 border-l border-gray-800 shadow-xl">
+        <div class="p-4 space-y-2">
+            <a href="/" class="block px-4 py-2 text-white hover:bg-gray-700 rounded">Dashboard</a>
+            {% if is_admin %}
+            <a href="/settings" class="block px-4 py-2 text-white hover:bg-gray-700 rounded">Settings</a>
+            {% endif %}
+            <button onclick="logout()" class="block w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 rounded">Logout</button>
+        </div>
+    </div>
+
     <!-- Video Background -->
     <div class="video-background">
         <video autoplay loop muted playsinline id="bgVideo">
@@ -30,6 +104,7 @@
             </div>
             <div class="top-bar-right">
                 <div class="bot-controls">
+                    {% if is_admin %}
                     <button id="stopBtn" class="control-btn" data-mode="inactive">
                         Stop
                     </button>
@@ -39,6 +114,17 @@
                     <button id="startProdBtn" class="control-btn" data-mode="production">
                         Production
                     </button>
+                    {% else %}
+                    <button disabled class="control-btn opacity-50 cursor-not-allowed" title="Admin only">
+                        Stop
+                    </button>
+                    <button disabled class="control-btn opacity-50 cursor-not-allowed" title="Admin only">
+                        Paper
+                    </button>
+                    <button disabled class="control-btn opacity-50 cursor-not-allowed" title="Admin only">
+                        Production
+                    </button>
+                    {% endif %}
                 </div>
                 <div class="flex flex-col items-end gap-1">
                     <div id="healthCheck" class="text-sm text-gray"></div>
@@ -82,9 +168,15 @@
                             <span class="param-label">Max Daily Loss</span>
                             <span class="param-value" id="paramMaxDaily">$0</span>
                         </div>
+                        {% if is_admin %}
                         <button id="editParamsBtn" class="btn btn-primary w-full mt-4">
                             Edit Parameters
                         </button>
+                        {% else %}
+                        <button disabled class="btn btn-secondary w-full mt-4 opacity-50 cursor-not-allowed">
+                            Edit Parameters (Admin Only)
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -266,17 +358,28 @@
             <!-- Notes Section -->
             <div class="card p-6 mb-8">
                 <h2 class="text-xl font-semibold mb-4 text-white">Notes</h2>
+                {% if is_admin %}
                 <textarea id="botNotes" class="w-full py-2 px-3" rows="5" placeholder="Add notes about this bot..."></textarea>
                 <p class="text-sm text-gray mt-2">Auto-saves 2 seconds after you stop typing</p>
+                {% else %}
+                <textarea id="botNotes" class="w-full py-2 px-3" rows="5" placeholder="Add notes about this bot..." readonly disabled></textarea>
+                <p class="text-sm text-yellow-500 mt-2">Guest users cannot edit notes (read-only)</p>
+                {% endif %}
             </div>
 
             <!-- Danger Zone - Delete Bot -->
             <div class="card p-6 border-2 border-red-600">
                 <h2 class="text-xl font-semibold mb-2 text-red">Danger Zone</h2>
                 <p class="text-sm text-gray mb-4">Deleting this bot is permanent and cannot be undone. All trade history and configuration will be lost.</p>
+                {% if is_admin %}
                 <button id="deleteBotBtn" class="btn btn-danger">
                     Delete Bot
                 </button>
+                {% else %}
+                <button disabled class="btn btn-secondary opacity-50 cursor-not-allowed">
+                    Delete Bot (Admin Only)
+                </button>
+                {% endif %}
             </div>
         </main>
     </div>
@@ -298,6 +401,48 @@
         let botData = null;
         let notesDebounceTimer = null;
         let currentPeriod = '7d';
+
+        // Admin status from Jinja template
+        const isAdmin = {{ is_admin|tojson }};
+
+        // Hamburger menu toggle
+        document.getElementById('hamburgerBtn').addEventListener('click', () => {
+            const menu = document.getElementById('hamburgerMenu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const menu = document.getElementById('hamburgerMenu');
+            const btn = document.getElementById('hamburgerBtn');
+            if (!menu.contains(e.target) && !btn.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Logout function
+        function logout() {
+            fetch('/api/auth/logout', { method: 'POST' })
+                .then(() => window.location.href = '/login');
+        }
+
+        // Update header stats
+        function updateHeaderStats() {
+            if (!botData) return;
+
+            document.getElementById('headerBotName').textContent = botData.name || 'Bot';
+            document.getElementById('headerTargetUser').textContent = 'Target: ' + (botData.target_user_url || 'N/A').substring(0, 20) + '...';
+            document.getElementById('headerStatus').textContent = (botData.status || 'inactive').toUpperCase();
+
+            const pl = botData.total_profit || 0;
+            document.getElementById('headerBotPL').textContent = '$' + pl.toFixed(2);
+            document.getElementById('headerBotPL').className = 'font-semibold ' + (pl >= 0 ? 'text-green-400' : 'text-red-400');
+
+            document.getElementById('headerTotalTrades').textContent = botData.total_trades || 0;
+
+            const winRate = botData.total_trades > 0 ? ((botData.winning_trades || 0) / botData.total_trades * 100) : 0;
+            document.getElementById('headerBotWinRate').textContent = winRate.toFixed(1) + '%';
+        }
 
         // Initialize performance chart
         const ctx = document.getElementById('performanceChart').getContext('2d');
@@ -388,6 +533,9 @@
                 // Populate notes
                 document.getElementById('botNotes').value = botData.notes || '';
 
+                // Update header stats
+                updateHeaderStats();
+
                 // Load health check
                 await checkTargetUserHealth();
 
@@ -428,9 +576,16 @@
         }
 
         // Edit parameters modal
-        document.getElementById('editParamsBtn').addEventListener('click', () => {
-            document.getElementById('editParamsModal').classList.remove('hidden');
-        });
+        const editParamsBtn = document.getElementById('editParamsBtn');
+        if (editParamsBtn) {
+            editParamsBtn.addEventListener('click', () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot edit bot parameters.');
+                    return;
+                }
+                document.getElementById('editParamsModal').classList.remove('hidden');
+            });
+        }
 
         document.getElementById('cancelParamsBtn').addEventListener('click', () => {
             document.getElementById('editParamsModal').classList.add('hidden');
@@ -490,57 +645,83 @@
         });
 
         // Control buttons
-        document.getElementById('stopBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/bots/' + botId + '/stop', {method: 'POST'});
-                if (response.ok === true) {
-                    alert('Bot stopped');
-                    loadBotData();
+        const stopBtn = document.getElementById('stopBtn');
+        if (stopBtn) {
+            stopBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot control bots.');
+                    return;
                 }
-            } catch (error) {
-                alert('Error stopping bot');
-            }
-        });
-
-        document.getElementById('startPaperBtn').addEventListener('click', async () => {
-            try {
-                const response = await fetch('/api/bots/' + botId + '/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({mode: 'paper'})
-                });
-                if (response.ok === true) {
-                    alert('Bot started in paper mode');
-                    loadBotData();
+                try {
+                    const response = await fetch('/api/bots/' + botId + '/stop', {method: 'POST'});
+                    if (response.ok === true) {
+                        alert('Bot stopped');
+                        loadBotData();
+                    }
+                } catch (error) {
+                    alert('Error stopping bot');
                 }
-            } catch (error) {
-                alert('Error starting bot');
-            }
-        });
+            });
+        }
 
-        document.getElementById('startProdBtn').addEventListener('click', async () => {
-            if (confirm('Are you sure you want to start in PRODUCTION mode? This will use real money.') === false) {
-                return;
-            }
-
-            try {
-                const response = await fetch('/api/bots/' + botId + '/start', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({mode: 'production'})
-                });
-                if (response.ok === true) {
-                    alert('Bot started in production mode');
-                    loadBotData();
+        const startPaperBtn = document.getElementById('startPaperBtn');
+        if (startPaperBtn) {
+            startPaperBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot control bots.');
+                    return;
                 }
-            } catch (error) {
-                alert('Error starting bot');
-            }
-        });
+                try {
+                    const response = await fetch('/api/bots/' + botId + '/start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({mode: 'paper'})
+                    });
+                    if (response.ok === true) {
+                        alert('Bot started in paper mode');
+                        loadBotData();
+                    }
+                } catch (error) {
+                    alert('Error starting bot');
+                }
+            });
+        }
+
+        const startProdBtn = document.getElementById('startProdBtn');
+        if (startProdBtn) {
+            startProdBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot control bots.');
+                    return;
+                }
+                if (confirm('Are you sure you want to start in PRODUCTION mode? This will use real money.') === false) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/bots/' + botId + '/start', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({mode: 'production'})
+                    });
+                    if (response.ok === true) {
+                        alert('Bot started in production mode');
+                        loadBotData();
+                    }
+                } catch (error) {
+                    alert('Error starting bot');
+                }
+            });
+        }
 
         // Update parameters
         document.getElementById('parametersForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            if (!isAdmin) {
+                alert('Guest users cannot update bot parameters.');
+                return;
+            }
 
             const updateData = {
                 max_trade_value: parseFloat(document.getElementById('maxTradeValue').value),
@@ -571,6 +752,10 @@
 
         // Auto-save notes with debounce
         document.getElementById('botNotes').addEventListener('input', () => {
+            if (!isAdmin) {
+                return; // Silently ignore for guest users (textarea should be disabled anyway)
+            }
+
             if (notesDebounceTimer !== null) {
                 clearTimeout(notesDebounceTimer);
             }
@@ -591,13 +776,20 @@
         });
 
         // Delete bot handler
-        document.getElementById('deleteBotBtn').addEventListener('click', async () => {
-            const botName = botData ? botData.name : 'this bot';
-            const confirmMessage = 'Are you sure you want to delete "' + botName + '"?\n\nThis action cannot be undone. All trade history and configuration will be permanently lost.';
+        const deleteBotBtn = document.getElementById('deleteBotBtn');
+        if (deleteBotBtn) {
+            deleteBotBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot delete bots.');
+                    return;
+                }
 
-            if (confirm(confirmMessage) === false) {
-                return;
-            }
+                const botName = botData ? botData.name : 'this bot';
+                const confirmMessage = 'Are you sure you want to delete "' + botName + '"?\n\nThis action cannot be undone. All trade history and configuration will be permanently lost.';
+
+                if (confirm(confirmMessage) === false) {
+                    return;
+                }
 
             // Double confirmation for extra safety
             if (confirm('This is your last chance. Really delete "' + botName + '"?') === false) {
@@ -619,7 +811,8 @@
             } catch (error) {
                 alert('Error deleting bot: ' + error.message);
             }
-        });
+            });
+        }
 
         // Section state management
         const sectionStates = {

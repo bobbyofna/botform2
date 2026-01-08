@@ -12,11 +12,19 @@ from fastapi import APIRouter, HTTPException, Request, Body
 from pydantic import BaseModel
 
 from ..utils.id_generator import id_generator
+from ..utils.auth import auth_manager
 
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
+
+def require_admin(_request: Request):
+    """Check if user is admin."""
+    session_token = _request.cookies.get('session_token')
+    if auth_manager.is_admin(session_token) == False:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
 
 
 # Request/Response models
@@ -77,9 +85,9 @@ async def create_bot(request: Request, bot_data: BotCreate):
         if direct_match is not None:
             user_address = direct_match.group(1)
         else:
-            url_match = re.search(r'/user/(0x[a-fA-F0-9]{40})', bot_data.target_user_url)
+            url_match = re.search(r'/(user|profile)/(0x[a-fA-F0-9]{40})', bot_data.target_user_url)
             if url_match is not None:
-                user_address = url_match.group(1)
+                user_address = url_match.group(2)
             else:
                 user_address = None
 
@@ -503,4 +511,128 @@ async def reset_wallet_balance(request: Request, bot_id: str):
         raise
     except Exception as e:
         logger.error("Error resetting wallet: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# User management endpoints (admin only)
+class UserCreate(BaseModel):
+    username: str
+    password: str
+    role: str = 'guest'
+
+
+class UserUpdate(BaseModel):
+    password: Optional[str] = None
+    role: Optional[str] = None
+
+
+@router.get("/users")
+async def get_users(request: Request):
+    """Get all users (admin only)."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+        users = await db_manager.get_all_users()
+        return {"users": users}
+
+    except Exception as e:
+        logger.error("Error getting users: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/users")
+async def create_user(request: Request, user_data: UserCreate):
+    """Create a new user (admin only)."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Validate role
+        if user_data.role not in ['admin', 'guest']:
+            raise HTTPException(status_code=400, detail="Role must be 'admin' or 'guest'")
+
+        # Check if username already exists
+        existing_user = await db_manager.get_user_by_username(user_data.username)
+        if existing_user is not None:
+            raise HTTPException(status_code=400, detail="Username already exists")
+
+        # Create user
+        user = await db_manager.create_user(
+            _username=user_data.username,
+            _password=user_data.password,
+            _role=user_data.role
+        )
+
+        return user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error creating user: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/users/{user_id}")
+async def update_user(request: Request, user_id: str, user_data: UserUpdate):
+    """Update user (admin only)."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Build update dict
+        update_dict = {}
+        if user_data.password is not None:
+            # Hash the password
+            update_dict['password_hash'] = auth_manager.hash_password(user_data.password)
+        if user_data.role is not None:
+            if user_data.role not in ['admin', 'guest']:
+                raise HTTPException(status_code=400, detail="Role must be 'admin' or 'guest'")
+            update_dict['role'] = user_data.role
+
+        if len(update_dict) == 0:
+            raise HTTPException(status_code=400, detail="No fields to update")
+
+        # Update user
+        updated_user = await db_manager.update_user(user_id, update_dict)
+
+        if updated_user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return updated_user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error updating user: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/users/{user_id}")
+async def delete_user(request: Request, user_id: str):
+    """Delete user (admin only)."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Get user to check if it's the admin user
+        user = await db_manager.get_user_by_id(user_id)
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Prevent deletion of admin user
+        if user['username'] == 'admin':
+            raise HTTPException(status_code=400, detail="Cannot delete the admin user")
+
+        # Delete user
+        result = await db_manager.delete_user(user_id)
+
+        if result == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return {"success": True, "message": "User deleted"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error deleting user: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))

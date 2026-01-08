@@ -39,6 +39,12 @@ class Config:
         self._poll_interval = int(os.getenv('POLL_INTERVAL', '5'))  # seconds
         self._rate_limit_delay = float(os.getenv('RATE_LIMIT_DELAY', '0.2'))  # seconds
 
+        # Authentication configuration
+        self._secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+        self._session_timeout = int(os.getenv('SESSION_TIMEOUT', '3600'))  # seconds
+        self._max_login_attempts = int(os.getenv('MAX_LOGIN_ATTEMPTS', '5'))
+        self._login_timeout = int(os.getenv('LOGIN_TIMEOUT', '300'))  # seconds
+
     @property
     def database_url(self):
         """Get database connection URL."""
@@ -108,6 +114,26 @@ class Config:
     def is_production(self):
         """Check if running in production mode."""
         return True if self._env == 'production' else False
+
+    @property
+    def secret_key(self):
+        """Get secret key for JWT tokens."""
+        return self._secret_key
+
+    @property
+    def session_timeout(self):
+        """Get session timeout in seconds."""
+        return self._session_timeout
+
+    @property
+    def max_login_attempts(self):
+        """Get maximum login attempts before lockout."""
+        return self._max_login_attempts
+
+    @property
+    def login_timeout(self):
+        """Get login lockout duration in seconds."""
+        return self._login_timeout
 
 
 # Global configuration instance
