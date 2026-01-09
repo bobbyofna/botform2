@@ -106,23 +106,30 @@ class CopyBot(BaseBot):
         return self
 
     async def _load_active_trades(self):
-        """Load all open trades from database into memory."""
+        """Load all open trades from database into memory and populate seen transactions."""
         try:
             if self._db_manager is None:
                 return
 
-            # Get all open trades for this bot
+            # Get all trades for this bot (both open and closed) to rebuild seen_transactions
             all_trades = await self._db_manager.get_bot_trades(self._id, _limit=1000)
 
-            # Filter for open trades only
+            # Filter for open trades and populate seen transactions
             open_count = 0
             for trade in all_trades:
+                # Add source_trade_id to seen transactions to prevent reprocessing
+                source_trade_id = trade.get('source_trade_id')
+                if source_trade_id:
+                    self._seen_transactions.add(source_trade_id)
+
                 if trade.get('status') == 'open':
                     trade_id = trade.get('trade_id')
                     self._active_trades[trade_id] = trade
                     open_count = open_count + 1
 
-            self._logger.info("Loaded {} open trades from database".format(open_count))
+            self._logger.info("Loaded {} open trades and {} seen transactions from database".format(
+                open_count, len(self._seen_transactions)
+            ))
 
         except Exception as e:
             self._logger.error("Failed to load active trades: {}".format(str(e)))
@@ -210,13 +217,8 @@ class CopyBot(BaseBot):
                 else:
                     self._logger.warning("Failed to copy trade or trade was filtered out")
 
-                # Mark transaction as seen
+                # Mark transaction as seen (permanently to prevent reprocessing)
                 self._seen_transactions.add(tx_hash)
-
-                # Limit seen transactions set size to prevent memory issues
-                if len(self._seen_transactions) > 1000:
-                    # Remove oldest half
-                    self._seen_transactions = set(list(self._seen_transactions)[500:])
 
                 i = i + 1
 
@@ -236,40 +238,106 @@ class CopyBot(BaseBot):
             return
 
         try:
-            # Get current market prices for all active positions
-            # We need to check if the source trader has closed their positions
+            # Get recent activities from target user
             activities = await self._polymarket_client.get_user_recent_activity(
                 _user_address=self._target_address,
                 _limit=50  # Get more activities to catch SELL orders
             )
 
-            # Build a set of active transaction hashes from recent SELL orders
-            source_closed_trades = set()
+            # Build a mapping of market/outcome combinations that have been sold by target user
+            # Key: (market_id, outcome), Value: list of SELL transaction data
+            source_sell_orders = {}
             for activity in activities:
                 if activity.get('side') == 'SELL':
-                    source_closed_trades.add(activity.get('transactionHash'))
+                    market_id = activity.get('conditionId', '')
+                    outcome = activity.get('outcome', '')
+                    key = (market_id, outcome)
+
+                    if key not in source_sell_orders:
+                        source_sell_orders[key] = []
+
+                    source_sell_orders[key].append({
+                        'tx_hash': activity.get('transactionHash'),
+                        'price': activity.get('price', 0),
+                        'size': activity.get('size', 0),
+                        'timestamp': activity.get('timestamp', 0)
+                    })
 
             # Check each of our active trades
             trades_to_close = []
             for trade_id, trade in list(self._active_trades.items()):
-                source_tx = trade.get('source_trade_id')
-
-                # Check if source trader closed this position
-                # Note: This is a simplified approach. In reality, we'd need to match
-                # the SELL order to the original BUY order by market/outcome/user
-                # For now, we'll rely on stop-loss monitoring primarily
-
-                # Check stop loss
                 entry_price = float(trade.get('price', 0))
                 amount = float(trade.get('amount', 0))
                 outcome = trade.get('outcome', '')
                 market_id = trade.get('market_id', '')
+                opened_at = trade.get('opened_at')
 
-                # Get current market price
-                # For paper trading, we'll simulate by getting recent trades in same market
+                # Parse opened_at timestamp if it's a string
+                if isinstance(opened_at, str):
+                    from dateutil import parser
+                    opened_at = parser.parse(opened_at)
+                elif opened_at is None:
+                    # If no timestamp, skip source trader close check
+                    opened_at = datetime.utcnow()
+
+                # Convert to Unix timestamp for comparison
+                opened_timestamp = int(opened_at.timestamp())
+
+                # Check if source trader has closed this market/outcome combination
+                # We match by market + outcome + timestamp (SELL must be after our BUY)
+                key = (market_id, outcome)
+                if key in source_sell_orders:
+                    # Find SELL orders that happened AFTER we opened our position
+                    # Also add minimum hold time of 30 seconds to avoid closing immediately
+                    min_hold_time = 30  # seconds
+                    matching_sells = [
+                        sell for sell in source_sell_orders[key]
+                        if (sell.get('timestamp', 0) > opened_timestamp and
+                            sell.get('timestamp', 0) > opened_timestamp + min_hold_time)
+                    ]
+
+                    if len(matching_sells) > 0:
+                        # Use the most recent SELL price as exit price
+                        most_recent_sell = max(matching_sells, key=lambda x: x.get('timestamp', 0))
+                        exit_price = float(most_recent_sell.get('price', 0))
+
+                        # Validate exit price
+                        if exit_price <= 0 or exit_price > 1.0:
+                            self._logger.error(
+                                "Invalid exit price {} from source trader SELL. Skipping close.".format(exit_price)
+                            )
+                            continue
+
+                        self._logger.info(
+                            "TARGET USER CLOSED POSITION: Market {} {} - Closing our trade {} at {}".format(
+                                market_id[:10], outcome, trade_id, exit_price
+                            )
+                        )
+                        trades_to_close.append((trade_id, exit_price, 'source_trader_close'))
+                        continue  # Skip stop-loss check if we're closing due to source trader
+
+                # Check minimum hold time before evaluating stop-loss
+                # This prevents closing positions immediately due to temporary price fluctuations
+                time_held = (datetime.utcnow() - opened_at).total_seconds()
+                min_hold_for_stop_loss = 60  # Wait at least 60 seconds before stop-loss can trigger
+
+                if time_held < min_hold_for_stop_loss:
+                    # Too early to evaluate stop-loss
+                    continue
+
+                # Get current market price for stop-loss monitoring
                 current_price = await self._get_current_market_price(market_id, outcome)
 
                 if current_price is None:
+                    continue
+
+                # Validate current price
+                if current_price <= 0 or current_price > 1.0:
+                    self._logger.warning(
+                        "Invalid current price {} for market {} {}. Skipping stop-loss check.".format(
+                            current_price, market_id[:10], outcome
+                        )
+                    )
                     continue
 
                 # Calculate current P&L percentage
@@ -282,8 +350,8 @@ class CopyBot(BaseBot):
                 stop_loss_pct = float(self._parameters.get('stop_loss_percentage', 10.0))
                 if pnl_percentage <= -stop_loss_pct:
                     self._logger.warning(
-                        "STOP LOSS TRIGGERED: Trade {} at {:.2f}% loss (threshold: {:.2f}%)".format(
-                            trade_id, pnl_percentage, stop_loss_pct
+                        "STOP LOSS TRIGGERED: Trade {} at {:.2f}% loss (threshold: {:.2f}%) after {:.0f}s".format(
+                            trade_id, pnl_percentage, stop_loss_pct, time_held
                         )
                     )
                     trades_to_close.append((trade_id, current_price, 'stop_loss'))
@@ -360,6 +428,7 @@ class CopyBot(BaseBot):
             daily_cutoff = now - timedelta(hours=24)
 
             total_loss = 0.0
+            loss_count = 0
             for trade in all_trades:
                 # Only count closed trades
                 if trade.get('status') != 'closed':
@@ -382,6 +451,15 @@ class CopyBot(BaseBot):
                 pnl = float(trade.get('profit_loss', 0))
                 if pnl < 0:
                     total_loss = total_loss + abs(pnl)
+                    loss_count = loss_count + 1
+
+            # Log daily loss status periodically (only if we have losses)
+            if loss_count > 0:
+                self._logger.info(
+                    "Daily loss check: ${:.2f} / ${:.2f} limit ({} losing trades in past 24h)".format(
+                        total_loss, max_daily_loss, loss_count
+                    )
+                )
 
             # Check if exceeded limit
             if total_loss >= max_daily_loss:

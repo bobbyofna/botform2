@@ -239,7 +239,13 @@
                 <p class="text-sm text-gray mb-4">These commands affect all bots and should be used with caution.</p>
                 <div class="flex gap-4">
                     <button id="resetAllWalletsBtn" class="btn btn-primary">
-                        Reset All Paper Wallets to $1,000
+                        Reset All Paper Wallets to $1,000,000
+                    </button>
+                    <button id="resetAllPaperPLBtn" class="btn btn-primary">
+                        Reset All Paper Bots P/L to $0
+                    </button>
+                    <button id="deleteAllPaperTradesBtn" class="btn btn-primary">
+                        Delete All Paper Trade History
                     </button>
                 </div>
             </div>
@@ -435,7 +441,7 @@
                 const totalWalletBalance = bots.reduce((sum, bot) => sum + (bot.paper_wallet_balance || 0), 0);
                 const totalProfit = bots.reduce((sum, bot) => sum + (bot.total_profit || 0), 0);
                 const totalLoss = bots.reduce((sum, bot) => sum + (bot.total_loss || 0), 0);
-                const netPL = totalProfit - totalLoss;
+                const netPL = totalProfit - totalLoss;  // Net P/L = profits minus losses
                 const totalTrades = bots.reduce((sum, bot) => sum + (bot.total_trades || 0), 0);
                 const totalWinningTrades = bots.reduce((sum, bot) => sum + (bot.winning_trades || 0), 0);
                 const winRate = totalTrades > 0 ? (totalWinningTrades / totalTrades * 100) : 0;
@@ -474,13 +480,17 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="text-xs text-gray">P/L</p>
-                                    <p class="font-semibold ${(bot.total_profit || 0) >= 0 ? 'text-green' : 'text-red'}">
-                                        $${(bot.total_profit || 0).toFixed(2)}
+                                    <p class="font-semibold ${((bot.total_profit || 0) - (bot.total_loss || 0)) >= 0 ? 'text-green' : 'text-red'}">
+                                        $${((bot.total_profit || 0) - (bot.total_loss || 0)).toFixed(2)}
                                     </p>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-xs text-gray">Trades</p>
                                     <p class="text-sm text-white">${bot.total_trades || 0}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-xs text-gray">Win Rate</p>
+                                    <p class="text-sm text-white">${(bot.total_trades > 0 ? ((bot.winning_trades || 0) / bot.total_trades * 100).toFixed(1) : '0.0')}%</p>
                                 </div>
                             </div>
                         </div>
@@ -865,7 +875,7 @@
                     return;
                 }
 
-                if (confirm('Are you sure you want to reset ALL paper trading bots\' wallets to $1,000?\n\nThis will affect all bots currently in paper mode.') === false) {
+                if (confirm('Are you sure you want to reset ALL paper trading bots\' wallets to $1,000,000?\n\nThis will affect all bots currently in paper mode.') === false) {
                     return;
                 }
 
@@ -890,7 +900,87 @@
                     alert('Error resetting wallets: ' + error.message);
                 } finally {
                     resetAllWalletsBtn.disabled = false;
-                    resetAllWalletsBtn.textContent = 'Reset All Paper Wallets to $1,000';
+                    resetAllWalletsBtn.textContent = 'Reset All Paper Wallets to $1,000,000';
+                }
+            });
+        }
+
+        // Reset all paper bots P/L button
+        const resetAllPaperPLBtn = document.getElementById('resetAllPaperPLBtn');
+        if (resetAllPaperPLBtn) {
+            resetAllPaperPLBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot perform admin commands.');
+                    return;
+                }
+
+                if (confirm('Are you sure you want to RESET P/L to $0 for all active bots in paper trading mode?\n\nThis will reset total_profit, total_loss, total_trades, and winning_trades to zero.') === false) {
+                    return;
+                }
+
+                try {
+                    resetAllPaperPLBtn.disabled = true;
+                    resetAllPaperPLBtn.textContent = 'Resetting...';
+
+                    const response = await fetch('/api/bots/reset-all-paper-pl', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+
+                    if (response.ok === true) {
+                        const result = await response.json();
+                        alert(result.message || 'All paper bots P/L reset successfully');
+                        loadBots(); // Reload bot list to show updated stats
+                        loadSectionData(); // Reload trade sections
+                    } else {
+                        const errorData = await response.json();
+                        alert('Failed to reset P/L: ' + (errorData.detail || 'Unknown error'));
+                    }
+                } catch (error) {
+                    alert('Error resetting P/L: ' + error.message);
+                } finally {
+                    resetAllPaperPLBtn.disabled = false;
+                    resetAllPaperPLBtn.textContent = 'Reset All Paper Bots P/L to $0';
+                }
+            });
+        }
+
+        // Delete all paper trades button
+        const deleteAllPaperTradesBtn = document.getElementById('deleteAllPaperTradesBtn');
+        if (deleteAllPaperTradesBtn) {
+            deleteAllPaperTradesBtn.addEventListener('click', async () => {
+                if (!isAdmin) {
+                    alert('Guest users cannot perform admin commands.');
+                    return;
+                }
+
+                if (confirm('Are you sure you want to DELETE ALL paper trade history for all active bots in paper trading mode?\n\nThis action cannot be undone!') === false) {
+                    return;
+                }
+
+                try {
+                    deleteAllPaperTradesBtn.disabled = true;
+                    deleteAllPaperTradesBtn.textContent = 'Deleting...';
+
+                    const response = await fetch('/api/trades/delete-all-paper', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'}
+                    });
+
+                    if (response.ok === true) {
+                        const result = await response.json();
+                        alert(result.message || 'All paper trade history deleted successfully');
+                        loadBots(); // Reload bot list to show updated stats
+                        loadSectionData(); // Reload trade sections
+                    } else {
+                        const errorData = await response.json();
+                        alert('Failed to delete trades: ' + (errorData.detail || 'Unknown error'));
+                    }
+                } catch (error) {
+                    alert('Error deleting trades: ' + error.message);
+                } finally {
+                    deleteAllPaperTradesBtn.disabled = false;
+                    deleteAllPaperTradesBtn.textContent = 'Delete All Paper Trade History';
                 }
             });
         }

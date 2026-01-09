@@ -529,7 +529,7 @@ async def reset_wallet_balance(request: Request, bot_id: str):
 
 @router.post("/wallet/reset-all-paper")
 async def reset_all_paper_wallets(request: Request):
-    """Reset all active paper trading bots' wallets to $1000."""
+    """Reset all active paper trading bots' wallets to $1000000."""
     require_admin(request)
     try:
         db_manager = request.app.state.db_manager
@@ -538,24 +538,92 @@ async def reset_all_paper_wallets(request: Request):
         all_bots = await db_manager.get_all_bots()
         paper_bots = [bot for bot in all_bots if bot['status'] == 'paper']
 
-        # Reset each paper bot's wallet to $1000
+        # Reset each paper bot's wallet to $1000000
         reset_count = 0
         for bot in paper_bots:
-            await db_manager.reset_paper_wallet(bot['bot_id'], 1000.0)
+            await db_manager.reset_paper_wallet(bot['bot_id'], 1000000.0)
             reset_count = reset_count + 1
 
-        logger.info("Reset {} paper trading bot wallets to $1000".format(reset_count))
+        logger.info("Reset {} paper trading bot wallets to $1000000".format(reset_count))
 
         return {
             "success": True,
             "bots_reset": reset_count,
-            "message": "Reset {} paper trading bot(s) to $1000.00".format(reset_count)
+            "message": "Reset {} paper trading bot(s) to $1,000,000.00".format(reset_count)
         }
 
     except HTTPException:
         raise
     except Exception as e:
         logger.error("Error resetting all paper wallets: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/trades/delete-all-paper")
+async def delete_all_paper_trades(request: Request):
+    """Delete all paper trade history for active bots in paper trading mode."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Get all bots in paper mode to update their performance
+        all_bots = await db_manager.get_all_bots()
+        paper_bots = [bot for bot in all_bots if bot['status'] == 'paper']
+
+        # Delete all paper trades for active paper bots
+        deleted_count = await db_manager.delete_all_paper_trades_for_active_bots()
+
+        # Reset performance metrics for each paper bot
+        for bot in paper_bots:
+            await db_manager.update_bot(bot['bot_id'], {
+                'total_trades': 0,
+                'winning_trades': 0,
+                'total_profit': 0.0,
+                'total_loss': 0.0
+            })
+
+        logger.info("Deleted {} paper trades for {} active paper trading bots".format(deleted_count, len(paper_bots)))
+
+        return {
+            "success": True,
+            "trades_deleted": deleted_count,
+            "bots_affected": len(paper_bots),
+            "message": "Deleted {} paper trade(s) for {} active paper trading bot(s)".format(deleted_count, len(paper_bots))
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error deleting all paper trades: {}".format(str(e)))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/bots/reset-all-paper-pl")
+async def reset_all_paper_bots_pl(request: Request):
+    """Reset P/L metrics for all active paper trading bots."""
+    require_admin(request)
+    try:
+        db_manager = request.app.state.db_manager
+
+        # Get count of paper bots before reset
+        all_bots = await db_manager.get_all_bots()
+        paper_bots = [bot for bot in all_bots if bot['status'] == 'paper']
+
+        # Reset P/L for all paper bots
+        reset_count = await db_manager.reset_all_paper_bots_pl()
+
+        logger.info("Reset P/L for {} paper trading bots".format(reset_count))
+
+        return {
+            "success": True,
+            "bots_reset": reset_count,
+            "message": "Reset P/L for {} active paper trading bot(s)".format(reset_count)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error resetting paper bots P/L: {}".format(str(e)))
         raise HTTPException(status_code=500, detail=str(e))
 
 

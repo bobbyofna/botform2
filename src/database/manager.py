@@ -771,3 +771,41 @@ class DatabaseManager:
         await self.execute(query, {'user_id': _user_id})
         self._logger.info("Deleted user: {}".format(_user_id))
         return 1
+
+    async def delete_all_paper_trades_for_active_bots(self):
+        """
+        Delete all paper trade history for bots currently in paper trading mode.
+
+        Returns:
+            Number of deleted trades
+        """
+        query = """
+            DELETE FROM trades
+            WHERE is_paper_trade = TRUE
+            AND bot_id IN (
+                SELECT bot_id FROM bots WHERE status = 'paper'
+            )
+        """
+        result = await self.execute(query, {})
+        self._logger.info("Deleted {} paper trades for active bots".format(result))
+        return result
+
+    async def reset_all_paper_bots_pl(self):
+        """
+        Reset P/L (total_profit, total_loss, total_trades, winning_trades) for all active paper bots.
+
+        Returns:
+            Number of bots updated
+        """
+        query = """
+            UPDATE bots
+            SET total_profit = 0.0,
+                total_loss = 0.0,
+                total_trades = 0,
+                winning_trades = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE status = 'paper'
+        """
+        result = await self.execute(query, {})
+        self._logger.info("Reset P/L for {} paper trading bots".format(result))
+        return result

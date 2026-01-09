@@ -468,7 +468,7 @@
             const wallet = botData.paper_wallet_balance || 0;
             document.getElementById('headerWalletBalance').textContent = '$' + wallet.toFixed(2);
 
-            const pl = botData.total_profit || 0;
+            const pl = (botData.total_profit || 0) - (botData.total_loss || 0);  // Net P/L
             document.getElementById('headerBotPL').textContent = '$' + pl.toFixed(2);
             document.getElementById('headerBotPL').className = 'font-semibold ' + (pl >= 0 ? 'text-green-400' : 'text-red-400');
 
@@ -556,8 +556,9 @@
                 });
 
                 // Update top bar stats
-                document.getElementById('topPL').textContent = '$' + ((botData.total_profit || 0).toFixed(2));
-                document.getElementById('topPL').className = 'font-semibold ' + ((botData.total_profit || 0) >= 0 ? 'text-green' : 'text-red');
+                const netPL = (botData.total_profit || 0) - (botData.total_loss || 0);
+                document.getElementById('topPL').textContent = '$' + (netPL.toFixed(2));
+                document.getElementById('topPL').className = 'font-semibold ' + (netPL >= 0 ? 'text-green' : 'text-red');
                 document.getElementById('topTrades').textContent = botData.total_trades || 0;
 
                 // Update parameter display
